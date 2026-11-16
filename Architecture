@@ -1,0 +1,197 @@
+tapnpay/
+├── README.md
+├── .gitignore
+├── .editorconfig
+├── .nvmrc
+├── pnpm-workspace.yaml
+├── package.json
+├── turbo.json
+│
+├── apps/
+│   │
+│   ├── student-web/                    # React SPA — students top up & view receipts
+│   │   ├── public/
+│   │   ├── src/
+│   │   │   ├── main.tsx
+│   │   │   ├── App.tsx
+│   │   │   ├── router.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── Login.tsx
+│   │   │   │   ├── Home.tsx            # balance + quick actions
+│   │   │   │   ├── TopUp.tsx           # Paystack inline
+│   │   │   │   ├── Transactions.tsx
+│   │   │   │   ├── Receipt.tsx
+│   │   │   │   └── ReportCard.tsx
+│   │   │   ├── components/
+│   │   │   ├── hooks/
+│   │   │   ├── lib/
+│   │   │   │   ├── api.ts
+│   │   │   │   ├── paystack.ts
+│   │   │   │   └── auth.ts
+│   │   │   └── styles/
+│   │   ├── index.html
+│   │   ├── tailwind.config.ts
+│   │   ├── vite.config.ts
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   ├── terminal-pwa/                   # React PWA — runs in POS browser, offline-first
+│   │   ├── public/
+│   │   │   ├── manifest.webmanifest
+│   │   │   └── icons/
+│   │   ├── src/
+│   │   │   ├── main.tsx
+│   │   │   ├── App.tsx
+│   │   │   ├── sw.ts                   # service worker (Workbox)
+│   │   │   ├── pages/
+│   │   │   │   ├── Login.tsx           # terminal token login
+│   │   │   │   ├── Checkout.tsx        # price keypad + scan → approve/void
+│   │   │   │   ├── History.tsx         # today's local transactions
+│   │   │   │   ├── Sync.tsx            # sync status + manual sync
+│   │   │   │   └── Setup.tsx           # first-run config (terminal_id, cashier)
+│   │   │   ├── components/
+│   │   │   │   ├── PriceKeypad.tsx
+│   │   │   │   ├── ScanListener.tsx    # keyboard-wedge + camera fallback
+│   │   │   │   ├── ApprovalScreen.tsx
+│   │   │   │   ├── VoidButton.tsx
+│   │   │   │   └── SyncBadge.tsx
+│   │   │   ├── db/
+│   │   │   │   ├── indexeddb.ts        # idb wrapper
+│   │   │   │   ├── balances.ts         # cards store
+│   │   │   │   ├── transactions.ts     # txn log store
+│   │   │   │   └── syncState.ts
+│   │   │   ├── lib/
+│   │   │   │   ├── qr.ts               # html5-qrcode / jsQR fallback
+│   │   │   │   ├── print.ts            # window.print() + receipt CSS
+│   │   │   │   ├── sync.ts             # batch upload + balance fetch
+│   │   │   │   ├── clock.ts            # server-time offset
+│   │   │   │   └── api.ts
+│   │   │   ├── styles/
+│   │   │   │   └── receipt.css         # @media print fixed-width layout
+│   │   │   └── assets/
+│   │   ├── index.html
+│   │   ├── tailwind.config.ts
+│   │   ├── vite.config.ts              # vite-plugin-pwa for service worker
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   └── admin-web/                      # React SPA — refunds, reports, card mgmt
+│       ├── public/
+│       ├── src/
+│       │   ├── main.tsx
+│       │   ├── App.tsx
+│       │   ├── router.tsx
+│       │   ├── pages/
+│       │   │   ├── Login.tsx
+│       │   │   ├── Dashboard.tsx
+│       │   │   ├── Refunds.tsx
+│       │   │   ├── Cards.tsx
+│       │   │   ├── Terminals.tsx
+│       │   │   ├── Cashiers.tsx
+│       │   │   └── Reports.tsx         # reconciliation, voids, refunds
+│       │   ├── components/
+│       │   ├── hooks/
+│       │   ├── lib/
+│       │   └── styles/
+│       ├── index.html
+│       ├── tailwind.config.ts
+│       ├── vite.config.ts
+│       ├── tsconfig.json
+│       └── package.json
+│
+├── packages/
+│   ├── ui/                             # shared React components (buttons, cards, modals)
+│   │   ├── src/
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   ├── api-client/                     # generated types from OpenAPI + thin fetch wrapper
+│   │   ├── src/
+│   │   │   ├── client.ts
+│   │   │   └── types.gen.ts            # from /openapi.json
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── config/                         # shared eslint / tsconfig / tailwind presets
+│       ├── eslint-preset.js
+│       ├── tsconfig.base.json
+│       └── tailwind-preset.ts
+│
+├── backend/                            # FastAPI
+│   ├── app/
+│   │   ├── main.py                     # app factory, router registration, CORS
+│   │   ├── core/
+│   │   │   ├── config.py               # Settings via pydantic-settings
+│   │   │   ├── security.py             # JWT sign/verify, password hashing
+│   │   │   └── logging.py
+│   │   ├── db/
+│   │   │   ├── base.py                 # DeclarativeBase
+│   │   │   ├── session.py              # async engine + sessionmaker
+│   │   │   └── init_db.py
+│   │   ├── models/                     # SQLAlchemy models
+│   │   │   ├── student.py
+│   │   │   ├── card.py
+│   │   │   ├── ledger.py
+│   │   │   ├── terminal.py
+│   │   │   ├── cashier.py
+│   │   │   └── refund.py
+│   │   ├── schemas/                    # Pydantic request/response models
+│   │   │   ├── student.py
+│   │   │   ├── card.py
+│   │   │   ├── topup.py
+│   │   │   ├── transaction.py
+│   │   │   ├── sync.py
+│   │   │   ├── refund.py
+│   │   │   └── terminal.py
+│   │   ├── api/
+│   │   │   ├── deps.py                 # get_db, get_current_student, get_terminal
+│   │   │   └── routers/
+│   │   │       ├── auth.py             # student login, terminal login, admin login
+│   │   │       ├── students.py
+│   │   │       ├── cards.py            # issue, block, replace
+│   │   │       ├── topups.py           # Paystack init
+│   │   │       ├── webhooks.py         # Paystack webhook (HMAC-verified)
+│   │   │       ├── sync.py             # POST /sync/transactions, GET /sync/delta
+│   │   │       ├── transactions.py     # student-side history
+│   │   │       ├── refunds.py          # admin approve/deny
+│   │   │       └── reports.py          # reconciliation, voids, refunds
+│   │   ├── services/
+│   │   │   ├── paystack.py             # init charge, verify, HMAC verify
+│   │   │   ├── ledger.py               # double-entry helpers
+│   │   │   ├── reconciliation.py       # daily invariant check
+│   │   │   ├── sync.py                 # batch apply, conflict/overdraft handling
+│   │   │   └── receipts.py             # 6-char code derivation
+│   │   └── utils/
+│   │       ├── ids.py                  # card_id, txn_id generators
+│   │       └── time.py
+│   ├── alembic/
+│   │   ├── env.py
+│   │   └── versions/
+│   ├── tests/
+│   │   ├── conftest.py
+│   │   ├── test_auth.py
+│   │   ├── test_topup_webhook.py
+│   │   ├── test_sync.py
+│   │   ├── test_reconciliation.py
+│   │   └── test_refunds.py
+│   ├── pyproject.toml                  # deps + ruff + pytest config
+│   ├── alembic.ini
+│   ├── .env.example
+│   └── Dockerfile
+│
+├── docs/
+│   ├── architecture.md                 # this README, expanded
+│   ├── api.md                          # endpoint reference
+│   ├── sync-protocol.md                # batch format + conflict rules
+│   ├── receipt-spec.md
+│   ├── void-refund-policy.md
+│   └── runbooks/
+│       ├── terminal-offline-too-long.md
+│       └── reconciliation-mismatch.md
+│
+└── infra/
+    ├── docker-compose.yml              # postgres + backend + (optional) pgadmin
+    ├── docker-compose.dev.yml
+    ├── nginx/
+    │   └── tapnpay.conf                # reverse proxy: /api → backend, / → static apps
+    └── scripts/
+        ├── seed_dev.py                 # seed students, cards, terminals
+        └── issue_cards.py              # bulk-generate card IDs + QR PNGs
