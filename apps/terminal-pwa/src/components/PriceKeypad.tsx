@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Delete } from "lucide-react";
-import { formatKobo } from "@tapnpay/ui";
 
 interface PriceKeypadProps {
   amountKobo: number;
@@ -15,6 +14,10 @@ export function PriceKeypad({
 }: PriceKeypadProps) {
   const [amountError, setAmountError] = useState("");
   const currentNaira = Math.floor(amountKobo / 100);
+  const formattedAmount = new Intl.NumberFormat("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amountKobo / 100);
 
   function appendDigits(digitsToAppend: string) {
     if (disabled) return;
@@ -32,17 +35,46 @@ export function PriceKeypad({
 
   function deleteLastDigit() {
     setAmountError("");
-    onChange(
-      currentNaira < 10
-        ? 0
-        : Math.floor(currentNaira / 10) * 100,
-    );
+    onChange(currentNaira < 10 ? 0 : Math.floor(currentNaira / 10) * 100);
   }
 
   function clearAmount() {
     setAmountError("");
     onChange(0);
   }
+
+  // Let cashiers use the physical keyboard while the keypad has focus. Keep
+  // scanner input alone when focus is elsewhere so keyboard-wedge readers work.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      if (disabled || event.ctrlKey || event.metaKey || event.altKey) return;
+      // Leave typing in unrelated form fields alone. On the checkout page,
+      // physical number keys should work even when no keypad control is focused.
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          (target instanceof HTMLInputElement &&
+            !target.closest('[aria-label="Purchase amount"]')) ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement)
+      ) return;
+
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        appendDigit(event.key);
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        deleteLastDigit();
+      } else if (event.key === "Delete" || event.key === "Escape") {
+        event.preventDefault();
+        clearAmount();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
 
   const buttonClass =
     "min-h-11 rounded-xl border border-[#E8DDCB] bg-white text-base font-semibold text-[#34271A] shadow-sm transition-colors hover:border-[#D4A359] hover:bg-[#FCFAF6] active:bg-[#ECD8BC] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-12";
@@ -73,13 +105,33 @@ export function PriceKeypad({
           >
             ₦
           </span>
-          <output
-            aria-live="polite"
+          <input
+            aria-label="Purchase amount in naira"
             aria-labelledby="purchase-amount-label"
-            className="min-w-0 truncate font-sora text-[30px] font-bold tracking-tight text-[#231B12] sm:text-[40px]"
-          >
-            {formatKobo(amountKobo).replace("₦", "")}
-          </output>
+            className="min-w-0 w-full bg-transparent text-center font-sora text-[30px] font-bold tracking-tight text-[#231B12] outline-none sm:text-[40px]"
+            autoComplete="off"
+            disabled={disabled}
+            inputMode="numeric"
+            onChange={(event) => {
+              const normalized = event.target.value.replace(/,/g, "").trim();
+              if (normalized !== "" && !/^\d*(\.\d{0,2})?$/.test(normalized)) {
+                return;
+              }
+              const nextAmountKobo = Math.round(Number(normalized || "0") * 100);
+              if (!Number.isSafeInteger(nextAmountKobo)) {
+                setAmountError(
+                  "This amount is too large to represent accurately.",
+                );
+                return;
+              }
+              setAmountError("");
+              onChange(nextAmountKobo);
+            }}
+            onFocus={(event) => event.currentTarget.select()}
+            pattern="[0-9]*"
+            type="text"
+            value={formattedAmount}
+          />
         </div>
         {amountError ? (
           <p className="mt-2 text-xs text-red-700" role="alert">

@@ -133,7 +133,7 @@ function About() {
         <div className="relative self-center overflow-hidden rounded-[30px] border border-[#EADDCF] bg-[#F7EFE4] px-9 shadow-[0_18px_48px_rgba(94,65,32,0.08)] sm:px-9">
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -right-16 -top-24 size-48 rounded-full border-[34px] border-[#F1E3CD]"
+            className="pointer-events-none absolute right-0 -top-24 size-48 rounded-full border-[34px] border-[#F1E3CD] sm:-right-16"
           />
           {campusFeatures.map(({ title, description, icon: Icon }, index) => (
             <article

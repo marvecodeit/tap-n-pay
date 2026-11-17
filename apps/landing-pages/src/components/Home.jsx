@@ -36,7 +36,7 @@ function Home() {
       className="min-h-[801px] bg-[#F8F3EC] px-5 py-12 text-[#34271A] sm:px-8 sm:py-16 lg:px-12 border-b border-[#EADCCB]"
     >
       <section className="mx-auto grid max-w-[1600px] items-center gap-14 lg:grid-cols-2">
-        <div className="animate-[home-enter_800ms_ease-out_both] motion-reduce:animate-none">
+        <div className="min-w-0 animate-[home-enter_800ms_ease-out_both] motion-reduce:animate-none">
           <div className="   mb-8 inline-flex items-center gap-3 rounded-full border border-[#EADCCB] bg-white px-5 py-2 text-sm font-bold tracking-wide text-[#8A5A16]">
             <span className="size-2.5 rounded-full bg-[#8A5A16]" />
             SMART CAMPUS PAYMENT SYSTEM
@@ -119,7 +119,7 @@ function Home() {
 
         <aside
           aria-label="TapNPay digital wallet preview"
-          className="relative  ml-90 mx-auto w-full max-w-[460px] pb-14 pt-10 sm:pb-16"
+          className="relative mx-auto min-w-0 w-full max-w-[460px] pb-14 pt-10 sm:pb-16"
         >
           <div className="relative mx-auto w-[min(100%,390px)] rounded-[3.5rem] border-[8px] border-[#EADCCB] bg-white p-3 shadow-[0_24px_60px_rgba(110,70,20,0.18)]">
             <div className="absolute left-1/2 top-3 z-10 h-4 w-24 -translate-x-1/2 " />
@@ -211,7 +211,7 @@ function Home() {
 
           <div
             style={{ rotate: "7deg" }}
-            className="absolute right-0 top-1 flex max-w-[320px]  rotate-8 animate-wallet-bounce items-center gap-3 rounded-2xl border border-[#EADCCB] bg-white px-4 py-3 text-[#34271A] shadow-xl motion-reduce:animate-none sm:-right-2"
+            className="absolute right-3 top-1 flex max-w-[320px] rotate-8 animate-wallet-bounce items-center gap-3 rounded-2xl border border-[#EADCCB] bg-white px-4 py-3 text-[#34271A] shadow-xl motion-reduce:animate-none sm:-right-2"
           >
             <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[#8A5A16] text-white">
               <Check aria-hidden="true" className="size-6" />

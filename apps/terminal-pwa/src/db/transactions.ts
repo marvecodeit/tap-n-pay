@@ -8,34 +8,47 @@ export async function seedFailedDemoTransactions(
   cashierId: string,
 ): Promise<void> {
   const db = await getDb();
-  const now = Date.now();
+  const tx = db.transaction("transactions", "readwrite");
   const demoTransactions = [
     { cardIndex: 0, amount: 25_000 },
     { cardIndex: 1, amount: 18_500 },
     { cardIndex: 2, amount: 32_000 },
-    { cardIndex: 3, amount: 12_000 },
-    { cardIndex: 0, amount: 21_500 },
   ];
+  const demoIds = new Set(
+    demoTransactions.map(
+      (_, index) => `demo-failed-${String(index + 1).padStart(3, "0")}`,
+    ),
+  );
+  const existingTransactions = await tx.store.getAll();
+
+  for (const transaction of existingTransactions) {
+    if (
+      transaction.txn_id.startsWith("demo-failed-") &&
+      !demoIds.has(transaction.txn_id)
+    ) {
+      await tx.store.delete(transaction.txn_id);
+    }
+  }
 
   for (const [index, demoTransaction] of demoTransactions.entries()) {
     const txn_id = `demo-failed-${String(index + 1).padStart(3, "0")}`;
-    if (await db.get("transactions", txn_id)) continue;
+    if (await tx.store.get(txn_id)) continue;
 
-    const txn: Transaction = {
+    await tx.store.put({
       txn_id,
       card_id: cards[demoTransaction.cardIndex].card_id.toUpperCase(),
       student_name: cards[demoTransaction.cardIndex].student_name,
       amount: demoTransaction.amount,
       terminal_id: terminalId,
       cashier_id: cashierId,
-      created_at: new Date(now - (index + 1) * 5 * 60_000).toISOString(),
+      created_at: new Date(Date.now() - (index + 1) * 5 * 60_000).toISOString(),
       status: "FAILED",
       synced_at: null,
       verification_code: deriveVerificationCode(txn_id),
-    };
-
-    await db.put("transactions", txn);
+    });
   }
+
+  await tx.done;
 }
 
 export async function logTransaction(params: {
@@ -46,7 +59,10 @@ export async function logTransaction(params: {
   cashier_id: string;
 }): Promise<Transaction> {
   const db = await getDb();
-  const txn_id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `txn_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const txn_id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `txn_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const verification_code = deriveVerificationCode(txn_id);
 
   const txn: Transaction = {
@@ -66,7 +82,9 @@ export async function logTransaction(params: {
   return txn;
 }
 
-export async function voidTransaction(txn_id: string): Promise<Transaction | undefined> {
+export async function voidTransaction(
+  txn_id: string,
+): Promise<Transaction | undefined> {
   const db = await getDb();
   const tx = db.transaction("transactions", "readwrite");
   const txn = await tx.store.get(txn_id);
@@ -110,7 +128,9 @@ export async function markTransactionsSynced(txnIds: string[]): Promise<void> {
   await tx.done;
 }
 
-export async function getRecentTransactions(limit = 50): Promise<Transaction[]> {
+export async function getRecentTransactions(
+  limit = 50,
+): Promise<Transaction[]> {
   const db = await getDb();
   const all = await db.getAllFromIndex("transactions", "by-created-at");
   return all.reverse().slice(0, limit);
@@ -120,5 +140,10 @@ export async function getShiftVoidCount(cashierId: string): Promise<number> {
   const db = await getDb();
   const all = await db.getAll("transactions");
   const today = new Date().toISOString().slice(0, 10);
-  return all.filter((t) => t.cashier_id === cashierId && t.status === "VOID" && t.created_at.startsWith(today)).length;
+  return all.filter(
+    (t) =>
+      t.cashier_id === cashierId &&
+      t.status === "VOID" &&
+      t.created_at.startsWith(today),
+  ).length;
 }

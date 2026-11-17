@@ -157,7 +157,9 @@ export function Dashboard() {
             <Smartphone aria-hidden="true" className="size-5" />
           </div>
           <div className="min-w-0">
-            <p className="font-sora text-lg font-bold tracking-tight text-white">TapNPay</p>
+            <p className="font-sora text-lg font-bold tracking-tight text-white">
+              TapNPay
+            </p>
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#D8CCBA]">
               Cashier terminal
             </p>
@@ -168,7 +170,10 @@ export function Dashboard() {
           <p className="px-3 text-xs font-medium uppercase tracking-[0.16em] text-[#A9987F]">
             Terminal
           </p>
-          <nav aria-label="Terminal sections" className="mt-3 flex flex-col gap-1.5">
+          <nav
+            aria-label="Terminal sections"
+            className="mt-3 flex flex-col gap-1.5"
+          >
             {renderNavigation()}
           </nav>
         </div>
@@ -188,7 +193,7 @@ export function Dashboard() {
             </span>
             <span
               aria-label="Connected"
-              className="size-2 rounded-full bg-[#20A36B]"
+              className="size-2 rounded-full bg-[#20A36B] motion-safe:animate-pulse"
             />
           </div>
           <div className="mt-4 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-wide text-[#887A66]">

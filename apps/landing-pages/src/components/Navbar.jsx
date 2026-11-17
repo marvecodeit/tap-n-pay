@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { sendStudentAction } from "../studentBridge.js";
 
 const qrFinderOrigins = [
@@ -45,11 +47,13 @@ const qrModules = Array.from({ length: 21 }, (_, row) =>
 );
 
 function Navbar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white px-5 py-3 text-[#6B5D4D] shadow-sm sm:px-8 lg:px-12">
       <nav
         aria-label="Main navigation"
-        className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-6 gap-y-4"
+        className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-6 gap-y-3 xl:flex-nowrap"
       >
         <a
           href="#home"
@@ -152,7 +156,24 @@ function Navbar() {
           </span>
         </a>
 
-        <div className="flex min-h-[50px] flex-wrap items-center justify-center gap-1 rounded-full bg-[#F8F3EC] p-1 md:h-[50px] md:flex-nowrap md:gap-2">
+        <button
+          aria-controls="mobile-navigation"
+          aria-expanded={isMenuOpen}
+          aria-label={
+            isMenuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
+          className="grid size-11 place-items-center rounded-lg border border-[#EADCCB] text-[#6B5D4D] transition-colors hover:bg-[#F8F3EC] xl:hidden"
+          onClick={() => setIsMenuOpen((open) => !open)}
+          type="button"
+        >
+          {isMenuOpen ? (
+            <X aria-hidden="true" className="size-5" />
+          ) : (
+            <Menu aria-hidden="true" className="size-5" />
+          )}
+        </button>
+
+        <div className="hidden min-h-[50px] flex-wrap items-center justify-center gap-1 rounded-full bg-[#F8F3EC] p-1 xl:flex xl:flex-nowrap xl:gap-2">
           <a
             href="#home"
             aria-current="page"
@@ -186,7 +207,7 @@ function Navbar() {
           </a>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="hidden items-center gap-2 sm:gap-3 xl:flex">
           <button
             onClick={() => sendStudentAction("login")}
             className="flex h-[42px] items-center justify-center rounded-full border border-[#EADCCB] px-4 text-base font-semibold text-[#6B5D4D] shadow-sm transition-colors hover:bg-[#F8F3EC] sm:px-7 sm:text-lg"
@@ -204,6 +225,55 @@ function Navbar() {
             Get Started
           </a>
         </div>
+
+        {isMenuOpen && (
+          <div
+            className="flex w-full flex-col gap-3 border-t border-[#F0E7DB] pt-3 xl:hidden"
+            id="mobile-navigation"
+          >
+            <div className="flex flex-col gap-1">
+              {[
+                ["#home", "Home"],
+                ["#how-it-works", "How It Works"],
+                ["#features", "Features"],
+                ["#about", "About Us"],
+                ["#contact", "Contact"],
+              ].map(([href, label]) => (
+                <a
+                  aria-current={href === "#home" ? "page" : undefined}
+                  className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[#6B5D4D] no-underline transition-colors hover:bg-[#F8F3EC]"
+                  href={href}
+                  key={href}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+            <div className="flex gap-2 border-t border-[#F0E7DB] pt-3">
+              <button
+                className="flex min-h-11 flex-1 items-center justify-center rounded-full border border-[#EADCCB] px-4 text-sm font-semibold text-[#6B5D4D] shadow-sm transition-colors hover:bg-[#F8F3EC]"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  sendStudentAction("login");
+                }}
+                type="button"
+              >
+                Login
+              </button>
+              <a
+                className="inline-flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-full bg-[#8A5A16] px-4 text-sm font-semibold text-white no-underline shadow-[0_8px_18px_rgba(110,70,20,0.2)] transition-colors hover:bg-[#70470F]"
+                href="#contact"
+                onClick={(event) => {
+                  setIsMenuOpen(false);
+                  if (sendStudentAction("signup")) event.preventDefault();
+                }}
+              >
+                Get Started
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
     </header>
   );
