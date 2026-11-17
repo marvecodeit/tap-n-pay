@@ -14,6 +14,9 @@
   "scripts": {
     "build": "tsc"
   },
+  "dependencies": {
+    "axios": "^1.13.2"
+  },
   "devDependencies": {
     "@tapnpay/config": "workspace:*",
     "typescript": "^5.7.3"

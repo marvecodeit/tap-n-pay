@@ -10,6 +10,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@tapnpay/api-client": "workspace:*",
     "@tapnpay/config": "workspace:*",
     "@tapnpay/ui": "workspace:*",
     "clsx": "^2.1.1",

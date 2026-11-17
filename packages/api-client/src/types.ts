@@ -8,6 +8,14 @@ export interface Student {
   balance?: number; // kobo
 }
 
+export interface StudentCreateRequest {
+  name: string;
+  student_id: string;
+  email?: string;
+  phone?: string;
+  initial_balance_kobo?: number;
+}
+
 export interface Card {
   card_id: string; // 12-16 char alphanumeric
   student_id: string;

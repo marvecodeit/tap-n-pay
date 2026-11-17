@@ -1,82 +1,135 @@
 export * from "./types";
 
-export interface ApiClientConfig {
+import axios, {
+  AxiosHeaders,
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
+import type {
+  Card,
+  ReconciliationReport,
+  Student,
+  StudentCreateRequest,
+  SyncResponse,
+  SyncUploadBatch,
+  Transaction,
+  TopUpInitResponse,
+  TopUpRequest,
+} from "./types";
+
+export interface AxiosApiClientConfig {
   baseUrl: string;
   authToken?: string;
+  timeoutMs?: number;
 }
 
-export class TapNPayApiClient {
-  private baseUrl: string;
-  private authToken?: string;
+export function createTapNPayAxios(config: AxiosApiClientConfig): AxiosInstance {
+  const client = axios.create({
+    baseURL: config.baseUrl.replace(/\/$/, ""),
+    timeout: config.timeoutMs ?? 15000,
+    headers: { "Content-Type": "application/json" },
+  });
 
-  constructor(config: ApiClientConfig) {
-    this.baseUrl = config.baseUrl.replace(/\/$/, "");
-    this.authToken = config.authToken;
+  client.interceptors.request.use((request: InternalAxiosRequestConfig) => {
+    if (config.authToken) {
+      request.headers = request.headers ?? new AxiosHeaders();
+      request.headers.set("Authorization", `Bearer ${config.authToken}`);
+    }
+    return request;
+  });
+
+  return client;
+}
+
+export class TapNPayAxiosClient {
+  readonly axios: AxiosInstance;
+
+  constructor(config: AxiosApiClientConfig) {
+    this.axios = createTapNPayAxios(config);
   }
 
   setToken(token: string) {
-    this.authToken = token;
+    this.axios.defaults.headers.common.Authorization = `Bearer ${token}`;
   }
 
-  private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...(options.headers as Record<string, string>),
-    };
-
-    if (this.authToken) {
-      headers["Authorization"] = `Bearer ${this.authToken}`;
-    }
-
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-      throw new Error(errorData.detail || `Request failed with status ${response.status}`);
-    }
-
-    return response.json();
+  clearToken() {
+    delete this.axios.defaults.headers.common.Authorization;
   }
 
-  // Sync endpoint
-  async syncBatch(batch: import("./types").SyncUploadBatch): Promise<import("./types").SyncResponse> {
-    return this.request("/api/v1/sync", {
-      method: "POST",
-      body: JSON.stringify(batch),
-    });
+  async createStudent(payload: StudentCreateRequest): Promise<Student> {
+    const response: AxiosResponse<Student> = await this.axios.post(
+      "/api/v1/students",
+      payload,
+    );
+    return response.data;
   }
 
-  // Student endpoints
-  async getStudent(studentId: string): Promise<import("./types").Student> {
-    return this.request(`/api/v1/students/${studentId}`);
+  async getStudent(studentId: string): Promise<Student> {
+    const response: AxiosResponse<Student> = await this.axios.get(
+      `/api/v1/students/${encodeURIComponent(studentId)}`,
+    );
+    return response.data;
   }
 
-  async getTransactions(cardId: string): Promise<import("./types").Transaction[]> {
-    return this.request(`/api/v1/transactions?card_id=${cardId}`);
+  async syncBatch(batch: SyncUploadBatch): Promise<SyncResponse> {
+    const response: AxiosResponse<SyncResponse> = await this.axios.post(
+      "/api/v1/sync",
+      batch,
+    );
+    return response.data;
+  }
+
+  async getTransactions(cardId: string): Promise<Transaction[]> {
+    const response: AxiosResponse<Transaction[]> = await this.axios.get(
+      "/api/v1/transactions",
+      { params: { card_id: cardId } },
+    );
+    return response.data;
   }
 
   async reportCardLost(cardId: string): Promise<{ success: boolean; message: string }> {
-    return this.request(`/api/v1/cards/${cardId}/report-lost`, {
-      method: "POST",
-    });
+    const response = await this.axios.post(
+      `/api/v1/cards/${encodeURIComponent(cardId)}/report-lost`,
+    );
+    return response.data;
   }
 
-  // Admin endpoints
-  async getReconciliation(): Promise<import("./types").ReconciliationReport> {
-    return this.request("/api/v1/admin/reconciliation");
+  async getReconciliation(): Promise<ReconciliationReport> {
+    const response: AxiosResponse<ReconciliationReport> = await this.axios.get(
+      "/api/v1/admin/reconciliation",
+    );
+    return response.data;
   }
 
-  async listCards(): Promise<import("./types").Card[]> {
-    return this.request("/api/v1/admin/cards");
+  async listCards(): Promise<Card[]> {
+    const response: AxiosResponse<Card[]> = await this.axios.get(
+      "/api/v1/admin/cards",
+    );
+    return response.data;
   }
 
-  async issueCard(studentId: string, cardId: string, initialBalanceKobo = 0): Promise<import("./types").Card> {
-    return this.request("/api/v1/admin/cards", {
-      method: "POST",
-      body: JSON.stringify({ student_id: studentId, card_id: cardId, balance: initialBalanceKobo }),
-    });
+  async issueCard(
+    studentId: string,
+    cardId: string,
+    initialBalanceKobo = 0,
+  ): Promise<Card> {
+    const response: AxiosResponse<Card> = await this.axios.post(
+      "/api/v1/admin/cards",
+      {
+        student_id: studentId,
+        card_id: cardId,
+        balance: initialBalanceKobo,
+      },
+    );
+    return response.data;
+  }
+
+  async initTopUp(payload: TopUpRequest): Promise<TopUpInitResponse> {
+    const response: AxiosResponse<TopUpInitResponse> = await this.axios.post(
+      "/api/v1/topups/init",
+      payload,
+    );
+    return response.data;
   }
 }

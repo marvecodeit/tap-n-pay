@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { TapNPayAxiosClient } from "@tapnpay/api-client";
 import type { StudentProfile } from "../portal/PortalShared";
+
+const api = new TapNPayAxiosClient({
+  baseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+});
 
 export function RegisterPage({
   onRegistered,
@@ -20,34 +25,58 @@ export function RegisterPage({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [cardRegistered, setCardRegistered] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function update(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
-    if (!acceptedTerms || !cardRegistered)
+    if (!acceptedTerms || !cardRegistered) {
       return setError(
         "Confirm the terms and student ID card registration to continue.",
       );
+    }
 
-    const student: StudentProfile = {
-      name: form.name.trim(),
-      student_id: form.studentId.trim().toUpperCase(),
-      email: form.email.trim(),
-      phone: form.phone.trim() || undefined,
-      created_at: new Date().toISOString(),
-      active_card_id: `CARD-${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-      balance: 0,
-      department: form.department.trim(),
-      faculty: form.faculty.trim(),
-      level: form.level,
-      isLocal: true,
-    };
-    onRegistered(student);
-    navigate("/dashboard/card");
+    setIsSubmitting(true);
+    try {
+      const registered = await api.createStudent({
+        name: form.name.trim(),
+        student_id: form.studentId.trim().toUpperCase(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+        initial_balance_kobo: 0,
+      });
+
+      const student: StudentProfile = {
+        name: registered.name,
+        student_id: registered.student_id,
+        email: registered.email,
+        phone: registered.phone,
+        created_at: registered.created_at,
+        active_card_id: registered.active_card_id,
+        balance: registered.balance ?? 0,
+        department: form.department.trim(),
+        faculty: form.faculty.trim(),
+        level: form.level,
+        isLocal: false,
+      };
+      onRegistered(student);
+      navigate("/dashboard/card");
+    } catch (requestError) {
+      const detail =
+        typeof requestError === "object" &&
+        requestError !== null &&
+        "response" in requestError
+          ? (requestError as { response?: { data?: { detail?: string } } })
+              .response?.data?.detail
+          : undefined;
+      setError(detail || "Could not create the student account. Check that the API server is running.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -148,10 +177,11 @@ export function RegisterPage({
               </p>
             )}
             <button
-              className="rounded-lg bg-[#8A5A16] px-5 py-3 font-semibold text-white hover:bg-[#70470F] sm:col-span-2"
+              className="rounded-lg bg-[#8A5A16] px-5 py-3 font-semibold text-white hover:bg-[#70470F] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+              disabled={isSubmitting}
               type="submit"
             >
-              Create student account
+              {isSubmitting ? "Creating student account..." : "Create student account"}
             </button>
           </form>
         </div>
