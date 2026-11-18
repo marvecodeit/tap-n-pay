@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '../db/index.js';
-import { student } from '../db/schema.js'
+import { student, studentWallet } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
-import type { NewStudent } from "../db/schema.js"
+import type { NewStudent } from '../db/schema.js';
+import { randomUUID } from 'node:crypto';
+
 @Injectable()
 export class UsersService {
     
@@ -31,7 +33,12 @@ export class UsersService {
     }
 
     async create(data:NewStudent) {
-        const [studentUser] = await db.insert(student).values(data).returning();
+        const studentId = randomUUID();
+        const [studentUsers] = await db.batch([
+            db.insert(student).values({ ...data, id: studentId }).returning(),
+            db.insert(studentWallet).values({ userId: studentId }).returning(),
+        ]);
+        const [studentUser] = studentUsers;
         return studentUser;
     }
 

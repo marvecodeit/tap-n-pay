@@ -1,11 +1,13 @@
 import {
-    ExceptionFilter, HttpException, Catch, ArgumentsHost, HttpStatus
+    ExceptionFilter, HttpException, Catch, ArgumentsHost, HttpStatus, Logger
 } from '@nestjs/common'
 import type {Request, Response} from 'express';
 
 @Catch()
 
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception:unknown, host:ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -15,13 +17,27 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const exceptionResponse = exception instanceof HttpException ? exception.getResponse() : HttpStatus.INTERNAL_SERVER_ERROR;
 
-  const message = typeof exceptionResponse === "string" ? exceptionResponse : ((exceptionResponse as Record<string, unknown>).message ?? exceptionResponse);
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      let rootCause: unknown = exception;
+      while (rootCause instanceof Error && rootCause.cause !== undefined) {
+        rootCause = rootCause.cause;
+      }
 
-  response.status(status).json({
-   statusCode:status,
-   message,
-   timestamp:new Date().toISOString(),
-   path:request.url
-})
+      const errorDetails = rootCause instanceof Error
+        ? rootCause.stack ?? rootCause.message
+        : String(rootCause);
+      this.logger.error(`${request.method} ${request.url} failed`, errorDetails);
+    }
+
+    const message = typeof exceptionResponse === "string"
+      ? exceptionResponse
+      : ((exceptionResponse as Record<string, unknown>).message ?? exceptionResponse);
+
+    response.status(status).json({
+      statusCode: status,
+      message,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    });
   }
 }

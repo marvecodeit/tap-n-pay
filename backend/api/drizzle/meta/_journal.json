@@ -15,6 +15,13 @@
       "when": 1794960000000,
       "tag": "0001_student_auth_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794985391368,
+      "tag": "0002_student_wallet_bootstrap",
+      "breakpoints": true
     }
   ]
 }

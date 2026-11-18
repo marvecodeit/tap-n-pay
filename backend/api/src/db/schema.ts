@@ -47,8 +47,8 @@ export  const walletEnum = pgEnum("wallets", ["studentWallet", "studentWalletTra
 
 export const  studentWallet = pgTable("studentWallet", {
     id:uuid("id").defaultRandom().primaryKey(),
-    userId:uuid("user_id").notNull().references(() => student.id, {onDelete:"cascade"}),
-    walletBalanace:numeric("wallet_balance", {precision:6, scale:2}).default('0').notNull(), 
+    userId:uuid("user_id").notNull().unique().references(() => student.id, {onDelete:"cascade"}),
+    walletBalanace:numeric("wallet_balance", {precision:7, scale:2}).default('0').notNull(), 
     updatedAt:timestamp("updated_at").defaultNow().notNull(),
     role:userRoleEnum("role").notNull().default("student"),
 
@@ -58,8 +58,8 @@ export const  studentWalletTransaction = pgTable("studentWalletTransaction", {
     id:uuid("id").defaultRandom().primaryKey(),
     walletId:uuid("wallet_id").notNull().references(() => studentWallet.id),
     type:text("type", {enum: ["credit", "debit"]}).notNull(),
-    balance:numeric("wallet_balance", {precision:6, scale:2}).default('0').notNull(), 
-    balanceAfter:numeric("balance_after", {precision:6, scale:2}).notNull(),
+    balance:numeric("wallet_balance", {precision:7, scale:2}).default('0').notNull(), 
+    balanceAfter:numeric("balance_after", {precision:7, scale:2}).notNull(),
     reference:text("reference").notNull().unique(),
     description: text('description'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
