@@ -7,6 +7,7 @@ export type StudentProfile = Student & {
   faculty?: string;
   level?: string;
   isLocal?: boolean;
+  is_profile_complete?: boolean;
 };
 
 export function toStudentProfile(account: AuthenticatedStudent): StudentProfile {
@@ -19,6 +20,8 @@ export function toStudentProfile(account: AuthenticatedStudent): StudentProfile 
     department: account.department,
     faculty: account.faculty,
     level: account.level,
+    profile_image_url: account.profile_image_url,
+    is_profile_complete: account.is_profile_complete,
     isLocal: false,
   };
 }

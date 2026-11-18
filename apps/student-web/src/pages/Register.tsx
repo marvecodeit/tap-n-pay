@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { api, getApiErrorMessage } from "../lib/api";
 
@@ -15,9 +15,22 @@ export function RegisterPage() {
   });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [cardRegistered, setCardRegistered] = useState(false);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!profileImage) {
+      setProfileImagePreview("");
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(profileImage);
+    setProfileImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [profileImage]);
 
   function update(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -27,6 +40,9 @@ export function RegisterPage() {
     event.preventDefault();
     setError("");
     setSuccess("");
+    if (!profileImage) {
+      return setError("Upload a student profile image to complete registration.");
+    }
     if (!acceptedTerms || !cardRegistered) {
       return setError(
         "Confirm the terms and student ID card registration to continue.",
@@ -44,6 +60,7 @@ export function RegisterPage() {
         department: form.department.trim(),
         faculty: form.faculty.trim(),
         level: form.level,
+        profileImage,
       });
       setSuccess(
         registered.message ||
@@ -145,6 +162,48 @@ export function RegisterPage() {
                 )}
               </select>
             </label>
+            <label className="block bg-transparent text-sm font-semibold text-[#26352D] sm:col-span-2">
+              Student profile photo <span aria-hidden="true">*</span>
+              <input
+                accept="image/jpeg,image/png,image/webp"
+                className="mt-2 w-full rounded-lg border border-[#EADCCB] bg-white px-3 py-3 font-normal text-[#34271A] file:mr-3 file:rounded-md file:border-0 file:bg-[#F8F0E5] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#70470F]"
+                onChange={(event) => {
+                  const image = event.target.files?.[0] ?? null;
+                  if (
+                    image &&
+                    !["image/jpeg", "image/png", "image/webp"].includes(
+                      image.type,
+                    )
+                  ) {
+                    setProfileImage(null);
+                    event.target.value = "";
+                    setError("Choose a JPEG, PNG, or WebP image.");
+                    return;
+                  }
+                  if (image && image.size > 5 * 1024 * 1024) {
+                    setProfileImage(null);
+                    event.target.value = "";
+                    setError("Profile images must be 5 MB or smaller.");
+                    return;
+                  }
+                  setError("");
+                  setProfileImage(image);
+                }}
+                required
+                type="file"
+              />
+              <span className="mt-1 block text-xs font-normal text-[#75685A]">
+                Required for your account and terminal identity check. JPEG,
+                PNG, or WebP, up to 5 MB.
+              </span>
+              {profileImagePreview && (
+                <img
+                  alt="Selected student profile"
+                  className="mt-3 size-24 rounded-xl border border-[#EADCCB] object-cover"
+                  src={profileImagePreview}
+                />
+              )}
+            </label>
             <p className="text-xs text-[#75685A] sm:col-span-2">
               Use at least 8 characters with a letter, a number, and a symbol.
             </p>
@@ -195,7 +254,7 @@ export function RegisterPage() {
               disabled={isSubmitting || Boolean(success)}
               type="submit"
             >
-              {isSubmitting ? "Creating student account..." : "Create student account"}
+              {isSubmitting ? "Uploading photo and creating account..." : "Create student account"}
             </button>
           </form>
         </div>

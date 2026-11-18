@@ -89,7 +89,7 @@ export function TransactionList({
               </span>
             </p>
             <strong
-              className={`text-sm font-bold sm:text-right ${isIncoming ? "text-[#176B3A]" : isSuccessful ? "text-[#176B3A]" : "text-[#A66B1C]"}`}
+              className={`text-sm font-bold sm:text-right ${isIncoming ? "text-[#176B3A]" : isSuccessful ? "text-red-700" : "text-[#A66B1C]"}`}
             >
               {isIncoming ? "+" : "−"}
               {formatKobo(transaction.amountKobo)}
@@ -153,7 +153,9 @@ export function TransactionList({
             </header>
 
             <div className="mt-6 border-b border-[#F0E7DE] pb-5 text-center">
-              <p className="text-3xl font-bold text-[#34271A]">
+              <p
+                className={`text-3xl font-bold ${selectedTransaction.direction === "in" ? "text-[#176B3A]" : "text-red-700"}`}
+              >
                 {selectedTransaction.direction === "in" ? "+" : "−"}
                 {formatKobo(selectedTransaction.amountKobo)}
               </p>

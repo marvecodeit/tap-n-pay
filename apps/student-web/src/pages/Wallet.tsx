@@ -6,24 +6,54 @@ import {
   EyeOff,
   Plus,
   ReceiptText,
+  Send,
   ShieldCheck,
   X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatKobo } from "@tapnpay/ui";
 import { EmptyState, PageHeading, usePortal } from "../portal/PortalShared";
+import { api, getApiErrorMessage } from "../lib/api";
 
 const presetAmounts = [10000, 25000, 50000, 100000];
 
 export function WalletPage() {
   const { student } = usePortal();
+  const [wallet, setWallet] = useState<Awaited<
+    ReturnType<typeof api.getStudentWallet>
+  > | null>(null);
+  const [walletLoading, setWalletLoading] = useState(true);
+  const [walletError, setWalletError] = useState("");
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [amountNaira, setAmountNaira] = useState(2000);
   const [customAmount, setCustomAmount] = useState("");
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const amountKobo = amountNaira * 100;
+
+  useEffect(() => {
+    let active = true;
+
+    api
+      .getStudentWallet()
+      .then((result) => {
+        if (active) setWallet(result);
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setWalletError(
+            getApiErrorMessage(requestError, "Could not load wallet data."),
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setWalletLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [student?.student_id]);
 
   useEffect(() => {
     if (!isTopUpOpen) return;
@@ -44,18 +74,29 @@ export function WalletPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeading
         title="Wallet"
-        description="Wallet data and payments will appear when NestJS wallet endpoints are available."
+        description="View your wallet balance and recent transactions."
       />
+
+      {walletError && (
+        <p
+          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          role="alert"
+        >
+          {walletError}
+        </p>
+      )}
 
       <section className="rounded-2xl bg-[#342218] p-5 text-white sm:p-6">
         <p className="text-sm text-white/75">AUL Student Wallet</p>
         <div className="mt-2 flex items-center gap-2">
           <p className="text-3xl font-bold">
-            {balanceVisible
-              ? student?.balance === undefined
-                ? "Unavailable"
-                : formatKobo(student.balance)
-              : "₦••••••"}
+            {!balanceVisible
+              ? "₦••••••"
+              : walletLoading
+                ? "Loading..."
+                : wallet
+                  ? formatKobo(wallet.balanceKobo)
+                  : "Unavailable"}
           </p>
           <button
             aria-label={balanceVisible ? "Hide balance" : "Show balance"}
@@ -83,7 +124,6 @@ export function WalletPage() {
           className="inline-flex min-h-12 min-w-56 items-center justify-center gap-2 rounded-full bg-[#8A5A16] px-6 py-3 text-sm font-semibold text-white hover:bg-[#70470F]"
           onClick={() => {
             setIsTopUpOpen(true);
-            setNotice("");
             setError("");
           }}
           type="button"
@@ -91,24 +131,14 @@ export function WalletPage() {
           <Plus aria-hidden="true" className="size-4" />
           Top up
         </button>
-        <button
-          className="inline-flex min-h-12 min-w-56 items-center justify-center gap-2 rounded-full border border-[#EADCCB] bg-white px-6 py-3 text-sm font-semibold text-[#8A5A16] hover:bg-[#FBF8F3]"
-          onClick={() => {
-            setIsTopUpOpen(false);
-            setNotice("Fee payments are not available yet.");
-          }}
-          type="button"
+        <Link
+          className="inline-flex min-h-12 min-w-56 items-center justify-center gap-2 rounded-full border border-[#EADCCB] bg-white px-6 py-3 text-sm font-semibold text-[#8A5A16] no-underline hover:bg-[#FBF8F3]"
+          to="/dashboard/transfer"
         >
-          <ArrowUpRight aria-hidden="true" className="size-4" />
-          Pay fees
-        </button>
+          <Send aria-hidden="true" className="size-4" />
+          Transfer
+        </Link>
       </div>
-
-      {notice && (
-        <p className="text-sm text-[#75685A]" role="status">
-          {notice}
-        </p>
-      )}
 
       {isTopUpOpen && (
         <div
@@ -145,9 +175,11 @@ export function WalletPage() {
               <div className="mt-4 border-t border-white/20 pt-4">
                 <p className="text-xs text-[#F3B965]">Current balance</p>
                 <p className="mt-2 text-2xl font-bold">
-                  {student?.balance === undefined
-                    ? "Unavailable"
-                    : formatKobo(student.balance)}
+                  {walletLoading
+                    ? "Loading..."
+                    : wallet
+                      ? formatKobo(wallet.balanceKobo)
+                      : "Unavailable"}
                 </p>
               </div>
             </div>
@@ -233,11 +265,51 @@ export function WalletPage() {
           </div>
         </div>
         <div className="px-5 pb-5">
-          <EmptyState
-            icon={<ReceiptText className="size-5" />}
-            title="Wallet history unavailable"
-            detail="The NestJS API does not expose wallet transaction history yet."
-          />
+          {walletLoading ? (
+            <p className="py-6 text-sm text-[#75685A]" role="status">
+              Loading wallet history...
+            </p>
+          ) : wallet?.transactions.length ? (
+            <ul className="divide-y divide-[#E9E9E9]">
+              {wallet.transactions.map((transaction) => {
+                const isCredit = transaction.type === "credit";
+                return (
+                  <li
+                    className="flex flex-wrap items-center justify-between gap-3 py-4"
+                    key={transaction.id}
+                  >
+                    <div>
+                      <p className="font-semibold text-[#34271A]">
+                        {transaction.description ||
+                          (isCredit ? "Wallet credit" : "Wallet debit")}
+                      </p>
+                      <p className="mt-1 text-xs text-[#75685A]">
+                        {new Date(transaction.createdAt).toLocaleString()} ·{" "}
+                        {transaction.reference}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`font-semibold ${isCredit ? "text-green-700" : "text-red-700"}`}
+                      >
+                        {isCredit ? "+" : "−"}
+                        {formatKobo(transaction.amountKobo)}
+                      </p>
+                      <p className="mt-1 text-xs text-[#75685A]">
+                        Balance: {formatKobo(transaction.balanceAfterKobo)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <EmptyState
+              icon={<ReceiptText className="size-5" />}
+              title="No wallet transactions yet"
+              detail="Your wallet activity will appear here."
+            />
+          )}
           <Link
             className="mt-4 inline-flex text-sm font-semibold text-[#8A5A16] no-underline hover:underline"
             to="/dashboard/receipts"

@@ -14,6 +14,7 @@ import type {
   StudentLoginRequest,
   StudentRegistrationRequest,
   StudentRegistrationResponse,
+  StudentWalletResponse,
   SyncResponse,
   SyncUploadBatch,
   Transaction,
@@ -78,9 +79,16 @@ export class TapNPayAxiosClient {
   async registerStudent(
     payload: StudentRegistrationRequest,
   ): Promise<StudentRegistrationResponse> {
+    const formData = new FormData();
+    formData.append("profileImage", payload.profileImage);
+    for (const [key, value] of Object.entries(payload)) {
+      if (key !== "profileImage") formData.append(key, value);
+    }
+
     const response = await this.axios.post<StudentRegistrationResponse>(
       "/api/auth/register",
-      payload,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
     );
     return response.data;
   }
@@ -102,6 +110,28 @@ export class TapNPayAxiosClient {
 
   async getCurrentStudent(): Promise<AuthenticatedStudent> {
     const response = await this.axios.get<AuthenticatedStudent>("/api/auth/me");
+    return response.data;
+  }
+
+  async uploadStudentProfileImage(
+    profileImage: File,
+  ): Promise<{ profile_image_url: string | null; is_profile_complete: boolean }> {
+    const formData = new FormData();
+    formData.append("profileImage", profileImage);
+
+    const response = await this.axios.post<{
+      profile_image_url: string | null;
+      is_profile_complete: boolean;
+    }>("/api/auth/profile-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  }
+
+  async getStudentWallet(): Promise<StudentWalletResponse> {
+    const response = await this.axios.get<StudentWalletResponse>(
+      "/api/auth/wallet",
+    );
     return response.data;
   }
 

@@ -1,4 +1,6 @@
 import type { LucideIcon } from "lucide-react";
+import { ArrowLeftRight, WalletCards } from "lucide-react";
+import type { StudentWalletTransaction } from "@tapnpay/api-client";
 
 export type TransactionStatus = "successful" | "pending";
 export type TransactionDirection = "in" | "out";
@@ -16,6 +18,32 @@ export type SampleTransaction = {
 };
 
 export const sampleTransactions: SampleTransaction[] = [];
+
+export function mapWalletTransactions(
+  transactions: StudentWalletTransaction[],
+): SampleTransaction[] {
+  return transactions.map((transaction) => {
+    const date = new Date(transaction.createdAt);
+    const isCredit = transaction.type === "credit";
+
+    return {
+      id: transaction.reference,
+      merchant:
+        transaction.description ||
+        (isCredit ? "Wallet credit" : "Wallet debit"),
+      category: isCredit ? "Money in" : "Money out",
+      date: date.toISOString().slice(0, 10),
+      time: date.toLocaleTimeString("en", {
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+      amountKobo: transaction.amountKobo,
+      direction: isCredit ? "in" : "out",
+      status: "successful",
+      icon: isCredit ? WalletCards : ArrowLeftRight,
+    };
+  });
+}
 
 /*
 export const demoTransactions: SampleTransaction[] = [

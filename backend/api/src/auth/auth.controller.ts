@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   HttpCode,
@@ -9,7 +10,10 @@ import {
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { CurrentUser } from '../common/filters/decorator/current-user.decorator.js';
@@ -19,6 +23,7 @@ import { loginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AccessTokenGuard } from './access-token.guard.js';
+import type { ProfileImageUpload } from './cloudinary.service.js';
 
 @Controller('auth')
 export class AuthController {
@@ -26,8 +31,29 @@ export class AuthController {
 
   @Public()
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @UseInterceptors(
+    FileInterceptor('profileImage', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_request, file, callback) => {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+          callback(
+            new BadRequestException('Upload a JPEG, PNG, or WebP profile image.'),
+            false,
+          );
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  register(
+    @Body() dto: RegisterDto,
+    @UploadedFile() profileImage?: ProfileImageUpload,
+  ) {
+    if (!profileImage) {
+      throw new BadRequestException('A profile image is required to register.');
+    }
+    return this.authService.register(dto, profileImage);
   }
 
   @Public()
@@ -60,6 +86,12 @@ export class AuthController {
   }
 
   @UseGuards(AccessTokenGuard)
+  @Get('wallet')
+  wallet(@CurrentUser() currentUser: Student) {
+    return this.authService.getStudentWallet(currentUser.id);
+  }
+
+  @UseGuards(AccessTokenGuard)
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get Current Authenticated User' })
@@ -76,7 +108,36 @@ export class AuthController {
       department: currentUser.department,
       faculty: currentUser.faculty,
       level: currentUser.level,
+      profile_image_url: this.authService.getProfileImageUrl(currentUser),
+      is_profile_complete: this.authService.isProfileComplete(currentUser),
     };
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @Post('profile-image')
+  @UseInterceptors(
+    FileInterceptor('profileImage', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_request, file, callback) => {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+          callback(
+            new BadRequestException('Upload a JPEG, PNG, or WebP profile image.'),
+            false,
+          );
+          return;
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  uploadProfileImage(
+    @CurrentUser() currentUser: Student,
+    @UploadedFile() profileImage?: ProfileImageUpload,
+  ) {
+    if (!profileImage) {
+      throw new BadRequestException('A profile image is required.');
+    }
+    return this.authService.uploadProfileImage(currentUser.id, profileImage);
   }
 
   @UseGuards(AccessTokenGuard)
