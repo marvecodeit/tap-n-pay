@@ -13,13 +13,16 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   app.use(cookieParser());
+  const configuredCorsOrigins = configService
+    .get<string>('CORS_ORIGINS')
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin:
-      configService
-        .get<string>('CORS_ORIGINS')
-        ?.split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean) ?? ['http://localhost:5180'],
+    origin: configuredCorsOrigins?.length
+      ? configuredCorsOrigins
+      : ['http://localhost:5180', 'http://localhost:5181'],
     credentials: true,
   });
 
