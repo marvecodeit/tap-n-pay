@@ -17,6 +17,7 @@ import { Public } from '../common/filters/decorator/public-decorator.js';
 import type { Student } from '../db/schema.js';
 import { loginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AccessTokenGuard } from './access-token.guard.js';
 
 @Controller('auth')
@@ -60,10 +61,15 @@ export class AuthController {
 
   @UseGuards(AccessTokenGuard)
   @Get('me')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Current Authenticated User' })
   me(@CurrentUser() currentUser: Student) {
     return {
+      id: currentUser.id,
       student_id: currentUser.matric_id,
+      matric_id: currentUser.matric_id,
       name: currentUser.fullname,
+      fullname: currentUser.fullname,
       email: currentUser.email,
       phone: currentUser.phonenumber,
       created_at: currentUser.createdAt,
@@ -83,3 +89,4 @@ export class AuthController {
     return this.authService.logout(currentUser.id, res);
   }
 }
+
