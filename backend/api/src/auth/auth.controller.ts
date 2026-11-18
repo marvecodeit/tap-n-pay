@@ -18,7 +18,7 @@ import type { Student } from '../db/schema.js';
 import { loginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AccessTokenGuard } from './access-token.guard.js';
+import { emit } from 'process';
 
 @Controller('auth')
 export class AuthController {
@@ -87,6 +87,19 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.logout(currentUser.id, res);
+  }
+
+  @Get("me")
+  @ApiBearerAuth()
+  @ApiOperation({summary:"Get Current Authenticated User"})
+  me(@CurrentUser() student:Student) {
+    return {
+      id:student.id,
+      email:student.email,
+      fullname:student.fullname,
+      matric_id:student.matric_id,
+      level:student.level
+    }
   }
 }
 
