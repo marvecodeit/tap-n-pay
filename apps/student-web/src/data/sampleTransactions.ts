@@ -1,11 +1,4 @@
-import {
-  BookOpen,
-  Shirt,
-  Store,
-  Utensils,
-  WalletCards,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export type TransactionStatus = "successful" | "pending";
 export type TransactionDirection = "in" | "out";
@@ -22,7 +15,10 @@ export type SampleTransaction = {
   icon: LucideIcon;
 };
 
-export const sampleTransactions: SampleTransaction[] = [
+export const sampleTransactions: SampleTransaction[] = [];
+
+/*
+export const demoTransactions: SampleTransaction[] = [
   {
     id: "AUL-TXN-8405",
     merchant: "Cafeteria (Main Hall)",
@@ -79,6 +75,7 @@ export const sampleTransactions: SampleTransaction[] = [
     icon: WalletCards,
   },
 ];
+*/
 
 export function formatTransactionDate(date: string) {
   return new Intl.DateTimeFormat("en-GB", {

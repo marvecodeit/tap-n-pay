@@ -41,8 +41,13 @@ export function TopUp({ student, onSuccess, onBack }: TopUpProps) {
     setIsProcessing(true);
     setStatusMsg(null);
 
-    // Paystack public test key (or env configured)
-    const paystackKey = "pk_test_sample_tapnpay_key";
+    const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
+    if (!paystackKey) {
+      setIsProcessing(false);
+      setStatusMsg("Wallet funding is unavailable until payment configuration is connected.");
+      return;
+    }
 
     if (typeof PaystackPop !== "undefined") {
       const handler = PaystackPop.setup({
@@ -62,11 +67,8 @@ export function TopUp({ student, onSuccess, onBack }: TopUpProps) {
       });
       handler.openIframe();
     } else {
-      // Offline / demo fallback when external Paystack CDN is not loaded
-      setTimeout(() => {
-        setIsProcessing(false);
-        onSuccess(selectedAmountKobo);
-      }, 1000);
+      setIsProcessing(false);
+      setStatusMsg("The payment service is not available. No funds were added.");
     }
   };
 

@@ -18,6 +18,12 @@ export class UsersService {
         })
     }
 
+    async findByMatricId(matricId: string) {
+        return db.query.student.findFirst({
+            where: eq(student.matric_id, matricId),
+        })
+    }
+
     async findById(id:string) {
         return db.query.student.findFirst({
             where:eq(student.id, id),

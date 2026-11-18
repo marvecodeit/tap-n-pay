@@ -8,6 +8,41 @@ export interface Student {
   balance?: number; // kobo
 }
 
+export interface AuthenticatedStudent {
+  student_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  created_at: string;
+  department: string;
+  faculty: string;
+  level: string;
+}
+
+export interface StudentRegistrationRequest {
+  fullname: string;
+  matric_id: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+  department: string;
+  faculty: string;
+  level: string;
+}
+
+export interface AuthTokenResponse {
+  accessToken: string;
+}
+
+export interface StudentLoginRequest {
+  identifier: string;
+  password: string;
+}
+
+export interface StudentRegistrationResponse {
+  message: string;
+}
+
 export interface StudentCreateRequest {
   name: string;
   student_id: string;

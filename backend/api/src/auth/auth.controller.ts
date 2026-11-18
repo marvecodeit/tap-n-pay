@@ -8,6 +8,7 @@ import {
   Query,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
@@ -16,6 +17,7 @@ import { Public } from '../common/filters/decorator/public-decorator.js';
 import type { Student } from '../db/schema.js';
 import { loginDto } from './dto/login.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
+import { AccessTokenGuard } from './access-token.guard.js';
 
 @Controller('auth')
 export class AuthController {
@@ -56,6 +58,22 @@ export class AuthController {
     return this.authService.refresh(req.cookies?.refresh_token ?? '', res);
   }
 
+  @UseGuards(AccessTokenGuard)
+  @Get('me')
+  me(@CurrentUser() currentUser: Student) {
+    return {
+      student_id: currentUser.matric_id,
+      name: currentUser.fullname,
+      email: currentUser.email,
+      phone: currentUser.phonenumber,
+      created_at: currentUser.createdAt,
+      department: currentUser.department,
+      faculty: currentUser.faculty,
+      level: currentUser.level,
+    };
+  }
+
+  @UseGuards(AccessTokenGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(

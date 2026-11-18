@@ -415,7 +415,7 @@ Student web app	React / Vue / Svelte + Tailwind, mobile-first
 Terminal web app	React / Vue / Svelte, PWA (service worker + IndexedDB via idb)
 QR decoding (camera fallback)	html5-qrcode, jsQR, or @zxing/browser
 Printing	window.print() + CSS, or POS vendor SDK
-Backend	Node (Express/Fastify) or Python (FastAPI/Flask)
+Backend	NestJS API
 Database	PostgreSQL (ledger, accounts)
 Paystack	Server-side webhook + inline JS in student app
 Operational Notes

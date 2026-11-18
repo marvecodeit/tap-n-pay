@@ -49,7 +49,7 @@ export function ReportCard({ student, onBlockCard, onBack }: ReportCardProps) {
           <div>
             <span className="text-xs text-slate-400 block">Active Card</span>
             <span className="font-mono font-bold text-slate-900">
-              {student.active_card_id || "CARD-A3F2-9K2"}
+              {student.active_card_id || "Card not issued"}
             </span>
           </div>
         </div>

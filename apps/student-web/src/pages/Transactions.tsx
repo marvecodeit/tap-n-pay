@@ -155,7 +155,7 @@ export function TransactionsPage() {
       <section className="overflow-hidden rounded-xl border border-[#EADCCB] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EADCCB] px-5 py-4">
           <h2 className="font-bold text-[#34271A]">Recent activity</h2>
-          <span className="text-xs text-[#75685A]">Sample transactions</span>
+          <span className="text-xs text-[#75685A]">Transaction records</span>
         </div>
         <TransactionList transactions={filteredTransactions} />
       </section>

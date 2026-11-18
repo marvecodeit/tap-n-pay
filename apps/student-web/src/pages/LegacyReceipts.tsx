@@ -62,7 +62,7 @@ export function Receipts({ transactions, onBack }: LegacyReceiptsProps) {
                     )}
                   </span>
                   <span className="mt-1 block font-mono text-xs text-slate-400">
-                    Voucher: {transaction.verification_code || "K7M2PQ"} ·{" "}
+                    Voucher: {transaction.verification_code || "Unavailable"} ·{" "}
                     {new Date(transaction.created_at).toLocaleDateString()}
                   </span>
                 </span>
@@ -99,7 +99,7 @@ export function Receipts({ transactions, onBack }: LegacyReceiptsProps) {
                 {formatKobo(selectedTxn.amount)}
               </div>
               <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-xs font-bold text-slate-600">
-                Verification: {selectedTxn.verification_code || "K7M2PQ"}
+                Verification: {selectedTxn.verification_code || "Unavailable"}
               </span>
             </div>
             <div className="space-y-2 font-mono text-xs text-slate-600">

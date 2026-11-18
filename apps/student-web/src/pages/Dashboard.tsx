@@ -44,16 +44,13 @@ const actions: DashboardAction[] = [
   },
 ];
 
-const weeklySpending = [38, 64, 48, 78, 52, 88, 66];
-const weekdays = ["M", "T", "W", "T", "F", "S", "S"];
-
 export function DashboardPage() {
   const { student } = usePortal();
   const navigate = useNavigate();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [actionMessage, setActionMessage] = useState("");
-  const studentName = student?.name || "Daniel Okafor";
-  const balanceKobo = student?.balance ?? 4_825_000;
+  const studentName = student?.name || "Student";
+  const balanceKobo = student?.balance;
   const firstName = studentName.split(" ")[0];
   function runAction(action: DashboardAction) {
     if (action.path) {
@@ -70,7 +67,11 @@ export function DashboardPage() {
       <header>
         <div>
           <span className="text-xs font-bold uppercase tracking-wide text-[#8A5A16]">
-            Wednesday, 19 February
+            {new Intl.DateTimeFormat("en", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            }).format(new Date())}
           </span>
           <h1 className="mt-2 text-3xl font-bold text-[#34271A]">
             Good morning, {firstName}.
@@ -101,7 +102,11 @@ export function DashboardPage() {
             </button>
           </div>
           <p className="relative z-10 mt-6 text-4xl font-bold sm:text-5xl">
-            {balanceVisible ? formatKobo(balanceKobo) : "₦••,•••.••"}
+            {balanceVisible
+              ? balanceKobo === undefined
+                ? "Unavailable"
+                : formatKobo(balanceKobo)
+              : "₦••,•••.••"}
           </p>
           <div className="relative z-10 mt-8 flex flex-wrap gap-3">
             <button
@@ -130,34 +135,13 @@ export function DashboardPage() {
         <div className="rounded-2xl border border-[#EADCCB] bg-white p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wide text-[#8A5A16]">
-                This month
-              </span>
               <h2 className="mt-1 text-lg font-bold text-[#34271A]">
                 Spending overview
               </h2>
             </div>
-            <strong className="text-lg text-[#34271A]">₦24,680</strong>
           </div>
-          <div
-            aria-label="Weekly spending overview"
-            className="mt-7 grid h-32 grid-cols-7 items-end gap-3"
-            role="img"
-          >
-            {weeklySpending.map((height, index) => (
-              <div
-                className="flex h-full flex-col items-center justify-end gap-2"
-                key={index}
-              >
-                <i
-                  className={`block w-full max-w-8 rounded-t-md ${index === 5 ? "bg-[#D7A34F]" : "bg-[#EED9BD]"}`}
-                  style={{ height: `${height}%` }}
-                />
-                <span className="text-xs font-medium text-[#75685A]">
-                  {weekdays[index]}
-                </span>
-              </div>
-            ))}
+          <div className="mt-7 grid h-32 place-items-center rounded-lg bg-[#FCFAF7] px-5 text-center text-sm text-[#75685A]">
+            Spending overview will appear when account activity is connected.
           </div>
         </div>
       </section>
@@ -217,6 +201,7 @@ export function DashboardPage() {
           </button>
         </div>
         <TransactionList
+          transactions={[]}
           limit={3}
           onTransactionClick={() => navigate("/dashboard/transactions")}
         />

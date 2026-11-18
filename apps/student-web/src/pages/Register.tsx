@@ -1,22 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { TapNPayAxiosClient } from "@tapnpay/api-client";
-import type { StudentProfile } from "../portal/PortalShared";
+import { Link } from "react-router-dom";
+import { api, getApiErrorMessage } from "../lib/api";
 
-const api = new TapNPayAxiosClient({
-  baseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
-});
-
-export function RegisterPage({
-  onRegistered,
-}: {
-  onRegistered: (student: StudentProfile) => void;
-}) {
-  const navigate = useNavigate();
+export function RegisterPage() {
   const [form, setForm] = useState({
     name: "",
     studentId: "",
     email: "",
+    password: "",
     department: "",
     faculty: "",
     level: "",
@@ -25,6 +16,7 @@ export function RegisterPage({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [cardRegistered, setCardRegistered] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function update(field: keyof typeof form, value: string) {
@@ -34,6 +26,7 @@ export function RegisterPage({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setSuccess("");
     if (!acceptedTerms || !cardRegistered) {
       return setError(
         "Confirm the terms and student ID card registration to continue.",
@@ -42,38 +35,27 @@ export function RegisterPage({
 
     setIsSubmitting(true);
     try {
-      const registered = await api.createStudent({
-        name: form.name.trim(),
-        student_id: form.studentId.trim().toUpperCase(),
+      const registered = await api.registerStudent({
+        fullname: form.name.trim(),
+        matric_id: form.studentId.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim() || undefined,
-        initial_balance_kobo: 0,
-      });
-
-      const student: StudentProfile = {
-        name: registered.name,
-        student_id: registered.student_id,
-        email: registered.email,
-        phone: registered.phone,
-        created_at: registered.created_at,
-        active_card_id: registered.active_card_id,
-        balance: registered.balance ?? 0,
+        password: form.password,
+        phoneNumber: form.phone.trim(),
         department: form.department.trim(),
         faculty: form.faculty.trim(),
         level: form.level,
-        isLocal: false,
-      };
-      onRegistered(student);
-      navigate("/dashboard/card");
+      });
+      setSuccess(
+        registered.message ||
+          "Registration received. Check your email to verify your account, then log in.",
+      );
     } catch (requestError) {
-      const detail =
-        typeof requestError === "object" &&
-        requestError !== null &&
-        "response" in requestError
-          ? (requestError as { response?: { data?: { detail?: string } } })
-              .response?.data?.detail
-          : undefined;
-      setError(detail || "Could not create the student account. Check that the API server is running.");
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Could not create the student account. Try again.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -94,8 +76,7 @@ export function RegisterPage({
           </p>
           <h1 className="mt-2 text-2xl font-bold">Create your account</h1>
           <p className="mt-2 text-sm text-[#75685A]">
-            Demo registration creates a temporary profile in this session. No
-            password or API is used.
+            Enter your student details to create a TapNPay account.
           </p>
           <form className="mt-7 grid gap-4 sm:grid-cols-2" onSubmit={submit}>
             <Field
@@ -114,29 +95,45 @@ export function RegisterPage({
               label="School email"
               required
               type="email"
+              autoComplete="email"
               value={form.email}
               onChange={(value) => update("email", value)}
             />
             <Field
+              label="Password"
+              required
+              type="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={(value) => update("password", value)}
+            />
+            <Field
               label="Phone number"
+              required
               type="tel"
+              autoComplete="tel"
               value={form.phone}
               onChange={(value) => update("phone", value)}
             />
             <Field
               label="Department"
+              required
+              autoComplete="organization-title"
               value={form.department}
               onChange={(value) => update("department", value)}
             />
             <Field
               label="Faculty"
+              required
+              autoComplete="organization"
               value={form.faculty}
               onChange={(value) => update("faculty", value)}
             />
             <label className="block bg-transparent text-sm font-semibold text-[#26352D]">
-              Level of study
+              Level of study <span aria-hidden="true">*</span>
               <select
                 className="mt-2 w-full rounded-lg border border-[#CBD8CF] bg-white px-3 py-3 font-normal"
+                required
                 value={form.level}
                 onChange={(event) => update("level", event.target.value)}
               >
@@ -148,6 +145,9 @@ export function RegisterPage({
                 )}
               </select>
             </label>
+            <p className="text-xs text-[#75685A] sm:col-span-2">
+              Use at least 8 characters with a letter, a number, and a symbol.
+            </p>
             <label className="flex items-start gap-3 rounded-lg bg-[#FBF8F3] p-3 text-sm sm:col-span-2">
               <input
                 className="mt-1"
@@ -176,9 +176,23 @@ export function RegisterPage({
                 {error}
               </p>
             )}
+            {success && (
+              <p
+                role="status"
+                className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 sm:col-span-2"
+              >
+                {success}{" "}
+                <Link
+                  className="font-semibold underline"
+                  to="/login"
+                >
+                  Go to sign in
+                </Link>
+              </p>
+            )}
             <button
               className="rounded-lg bg-[#8A5A16] px-5 py-3 font-semibold text-white hover:bg-[#70470F] disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
-              disabled={isSubmitting}
+              disabled={isSubmitting || Boolean(success)}
               type="submit"
             >
               {isSubmitting ? "Creating student account..." : "Create student account"}
@@ -196,19 +210,21 @@ function Field({
   onChange,
   type = "text",
   required = false,
+  autoComplete = "off",
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   required?: boolean;
+  autoComplete?: string;
 }) {
   return (
     <label className="block bg-transparent text-sm font-semibold text-[#26352D]">
       {label}
       {required && <span aria-hidden="true"> *</span>}
       <input
-        autoComplete="off"
+        autoComplete={autoComplete}
         className="mt-2 w-full rounded-lg border border-[#EADCCB] bg-white px-3 py-3 font-normal text-[#34271A] outline-none focus:border-[#8A5A16] focus:ring-2 focus:ring-[#F8F0E5]"
         required={required}
         type={type}

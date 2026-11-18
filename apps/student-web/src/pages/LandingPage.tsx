@@ -1,8 +1,6 @@
-import { useState } from "react";
 import {
   Zap,
   ShieldCheck,
-  CheckCircle2,
   ArrowRight,
   Terminal,
   ExternalLink,
@@ -13,27 +11,13 @@ import {
   Sparkles,
   Smartphone,
 } from "lucide-react";
-import { formatKobo } from "@tapnpay/ui";
 
 interface LandingPageProps {
   onOpenSignup: () => void;
-  onLoginDemo: () => void;
+  onLogin: () => void;
 }
 
-export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
-  const [simulatedDebit, setSimulatedDebit] = useState(false);
-  const [simBalanceKobo, setSimBalanceKobo] = useState(150000); // ₦1,500.00
-
-  const handleTestTap = () => {
-    if (simBalanceKobo >= 50000) {
-      setSimBalanceKobo((prev) => prev - 50000); // ₦500 meal
-      setSimulatedDebit(true);
-      setTimeout(() => setSimulatedDebit(false), 2500);
-    } else {
-      setSimBalanceKobo(150000); // reset
-    }
-  };
-
+export function LandingPage({ onOpenSignup, onLogin }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
       {/* Navigation */}
@@ -79,7 +63,7 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
               className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
             >
               <Terminal className="w-3.5 h-3.5" />
-              <span>POS Terminal Demo</span>
+              <span>POS Terminal</span>
             </a>
             <a
               href="http://localhost:5175"
@@ -94,7 +78,7 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={onLoginDemo}
+              onClick={onLogin}
               className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white transition-colors"
             >
               Log In
@@ -206,13 +190,12 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
               The Card is Static Identity. The Server is the Wallet.
             </h3>
             <p className="text-xs text-slate-400 mt-2">
-              Click the button below to test a live ₦500 cafeteria debit
-              simulation:
+              Illustrative preview only. No account or payment data is shown.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* The Physical Card Token Mockup */}
+            {/* Illustrative card preview */}
             <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-black p-6 rounded-3xl border border-indigo-800/50 shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -220,10 +203,10 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
                     CAMPUS CAFETERIA CARD
                   </span>
                   <div className="text-lg font-black text-white">
-                    John Okafor
+                    Student name
                   </div>
                   <div className="text-xs text-slate-400 font-mono">
-                    STU-2026-001
+                    Matric number
                   </div>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white text-sm shadow">
@@ -248,7 +231,7 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
                     12-Char Card Token
                   </span>
                   <span className="font-mono font-bold text-base text-slate-900 tracking-wider">
-                    CARD-A3F2-9K2
+                    Token assigned after registration
                   </span>
                 </div>
               </div>
@@ -259,16 +242,14 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
                     Wallet Balance
                   </span>
                   <div className="text-2xl font-black font-mono text-emerald-400">
-                    {formatKobo(simBalanceKobo)}
+                    Available after wallet connection
                   </div>
                 </div>
                 <button
-                  onClick={handleTestTap}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black text-xs rounded-xl transition-all shadow"
+                  disabled
+                  className="px-4 py-2 bg-slate-700 text-slate-300 font-black text-xs rounded-xl"
                 >
-                  {simBalanceKobo < 50000
-                    ? "Reset Balance"
-                    : "Simulate ₦500 Tap"}
+                  Checkout unavailable
                 </button>
               </div>
             </div>
@@ -282,38 +263,21 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
                     POS-001 • Counter 1
                   </span>
                 </div>
-                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800">
-                  🟢 IndexedDB Sync Ready
+                <span className="text-[10px] font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
+                  Terminal status unavailable
                 </span>
               </div>
 
-              {simulatedDebit ? (
-                <div className="text-center py-4 space-y-2 animate-in zoom-in-95 duration-200">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                    Payment Approved & Deducted!
-                  </div>
-                  <div className="text-3xl font-black font-mono text-white">
-                    ₦500.00
-                  </div>
-                  <div className="text-xs text-slate-400 font-mono">
-                    Meal Code:{" "}
-                    <strong className="text-emerald-400">K7M2PQ</strong> (Slip
-                    Printed)
-                  </div>
+              <div className="text-center py-8 space-y-2 text-slate-400">
+                <Smartphone className="w-10 h-10 text-slate-600 mx-auto" />
+                <div className="text-xs font-semibold text-slate-300">
+                  Checkout preview unavailable
                 </div>
-              ) : (
-                <div className="text-center py-8 space-y-2 text-slate-400">
-                  <Smartphone className="w-10 h-10 text-slate-600 mx-auto" />
-                  <div className="text-xs font-semibold text-slate-300">
-                    Awaiting Checkout Scan
-                  </div>
-                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-                    When student taps card, POS checks local balance in
-                    IndexedDB and deducts instantly under 0.1 seconds.
-                  </p>
-                </div>
-              )}
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  Payment status will appear here after the terminal backend is
+                  connected.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -476,10 +440,10 @@ export function LandingPage({ onOpenSignup, onLoginDemo }: LandingPageProps) {
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
-              onClick={onLoginDemo}
+              onClick={onLogin}
               className="w-full sm:w-auto px-6 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-2xl text-base transition-colors"
             >
-              Enter Demo Account (John Okafor)
+              Log in
             </button>
           </div>
         </div>

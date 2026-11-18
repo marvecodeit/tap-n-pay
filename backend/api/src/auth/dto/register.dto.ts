@@ -1,11 +1,8 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsNumber } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator';
 
 export class RegisterDto {
     @IsEmail()
     @IsNotEmpty()
-    @Matches(/^[a-zA-Z0-9_]{3,20}$/, {
-  message: 'Username can only contain letters, numbers and underscores',
-})
     email!:string;
 
     @IsString()
@@ -14,9 +11,6 @@ export class RegisterDto {
 
     @IsString()
     @IsNotEmpty()
-    @Matches(/^[a-zA-Z0-9_]{3,20}$/, {
-  message: 'matric can only contain letters, numbers and underscores',
-})
     matric_id!:string;
 
     @IsString()
@@ -27,13 +21,11 @@ export class RegisterDto {
   })
     password!:string
 
-    @IsString()
+    @IsString()
     @IsNotEmpty()
     level!:string;
 
-
-    @IsNumber()
-    @IsString()
+    @IsString()
     @IsNotEmpty()
     phoneNumber!:string;
 

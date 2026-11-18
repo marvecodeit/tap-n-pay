@@ -13,7 +13,7 @@ export function SignupModal({ isOpen, onClose, onSuccess }: SignupModalProps) {
   const [matricNumber, setMatricNumber] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [initialDepositNaira, setInitialDepositNaira] = useState("2000"); // ₦2,000 starter
+  const [initialDepositNaira, setInitialDepositNaira] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -51,18 +51,12 @@ export function SignupModal({ isOpen, onClose, onSuccess }: SignupModalProps) {
 
       const newStudent: Student = await res.json();
       onSuccess(newStudent);
-    } catch (err: any) {
-      // Local demo fallback if backend is offline or network fails
-      const fallbackStudent: Student = {
-        student_id: matricNumber.trim().toUpperCase(),
-        name: name.trim(),
-        email: email.trim() || `${matricNumber.toLowerCase()}@university.edu.ng`,
-        phone: phone.trim(),
-        created_at: new Date().toISOString(),
-        active_card_id: `CARD-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
-        balance: initialKobo,
-      };
-      onSuccess(fallbackStudent);
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : "Registration could not reach the backend. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

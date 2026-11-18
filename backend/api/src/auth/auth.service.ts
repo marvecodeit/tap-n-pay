@@ -24,11 +24,16 @@ export class AuthService {
     ) {}
 
     async register(dto:RegisterDto) {
-        const existingUser = await this.userService.findByEmail((dto.email))
+        const email = dto.email.trim().toLowerCase();
+        const matricId = dto.matric_id.trim();
+        const existingUser = await this.userService.findByEmail(email)
 
         if (existingUser)  {
             throw new ConflictException('An Account with this email already exist ')
 
+        }
+        if (await this.userService.findByMatricId(matricId)) {
+            throw new ConflictException('An account with this student ID already exists');
         }
 
         const passwordHash = await bcrypt.hash(dto.password, 8)
@@ -38,12 +43,12 @@ export class AuthService {
         const student = await this.userService.create({
             fullname:dto.fullname,
             passwordHash,
-            matric_id:dto.matric_id,
+            matric_id:matricId,
             level:dto.level,
             department:dto.department,
             phonenumber:dto.phoneNumber,
             faculty:dto.faculty,
-            email:dto.email,
+            email,
             verificationToken,
             verificationTokenExpiresAt
         })

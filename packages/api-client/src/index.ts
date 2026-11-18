@@ -1,16 +1,19 @@
 export * from "./types";
 
 import axios, {
-  AxiosHeaders,
   type AxiosInstance,
   type AxiosResponse,
-  type InternalAxiosRequestConfig,
 } from "axios";
 import type {
+  AuthTokenResponse,
+  AuthenticatedStudent,
   Card,
   ReconciliationReport,
   Student,
   StudentCreateRequest,
+  StudentLoginRequest,
+  StudentRegistrationRequest,
+  StudentRegistrationResponse,
   SyncResponse,
   SyncUploadBatch,
   Transaction,
@@ -24,20 +27,35 @@ export interface AxiosApiClientConfig {
   timeoutMs?: number;
 }
 
+export function isTapNPayUnauthorizedError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401;
+}
+
+export function getTapNPayErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : fallback;
+  }
+
+  const message = error.response?.data?.message;
+  if (Array.isArray(message)) return message.join(" ");
+  if (typeof message === "string") return message;
+  if (!error.response) return "Unable to reach the TapNPay API. Try again.";
+  return fallback;
+}
+
 export function createTapNPayAxios(config: AxiosApiClientConfig): AxiosInstance {
   const client = axios.create({
     baseURL: config.baseUrl.replace(/\/$/, ""),
     timeout: config.timeoutMs ?? 15000,
     headers: { "Content-Type": "application/json" },
+    withCredentials: true,
   });
-
-  client.interceptors.request.use((request: InternalAxiosRequestConfig) => {
-    if (config.authToken) {
-      request.headers = request.headers ?? new AxiosHeaders();
-      request.headers.set("Authorization", `Bearer ${config.authToken}`);
-    }
-    return request;
-  });
+  if (config.authToken) {
+    client.defaults.headers.common.Authorization = `Bearer ${config.authToken}`;
+  }
 
   return client;
 }
@@ -55,6 +73,40 @@ export class TapNPayAxiosClient {
 
   clearToken() {
     delete this.axios.defaults.headers.common.Authorization;
+  }
+
+  async registerStudent(
+    payload: StudentRegistrationRequest,
+  ): Promise<StudentRegistrationResponse> {
+    const response = await this.axios.post<StudentRegistrationResponse>(
+      "/api/auth/register",
+      payload,
+    );
+    return response.data;
+  }
+
+  async login(payload: StudentLoginRequest): Promise<AuthTokenResponse> {
+    const response = await this.axios.post<AuthTokenResponse>(
+      "/api/auth/login",
+      payload,
+    );
+    return response.data;
+  }
+
+  async refresh(): Promise<AuthTokenResponse> {
+    const response = await this.axios.post<AuthTokenResponse>(
+      "/api/auth/refresh",
+    );
+    return response.data;
+  }
+
+  async getCurrentStudent(): Promise<AuthenticatedStudent> {
+    const response = await this.axios.get<AuthenticatedStudent>("/api/auth/me");
+    return response.data;
+  }
+
+  async logout(): Promise<void> {
+    await this.axios.post("/api/auth/logout");
   }
 
   async createStudent(payload: StudentCreateRequest): Promise<Student> {
@@ -88,7 +140,9 @@ export class TapNPayAxiosClient {
     return response.data;
   }
 
-  async reportCardLost(cardId: string): Promise<{ success: boolean; message: string }> {
+  async reportCardLost(
+    cardId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const response = await this.axios.post(
       `/api/v1/cards/${encodeURIComponent(cardId)}/report-lost`,
     );

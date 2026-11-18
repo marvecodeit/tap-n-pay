@@ -1,4 +1,6 @@
-export const recentRecipients = [
+export const recentRecipients = [];
+/*
+export const demoRecentRecipients = [
   { name: "Ada Obi", matric: "AUL/CMP/23/128", initials: "AO" },
   { name: "Tolu Adeyemi", matric: "AUL/MED/21/014", initials: "TA" },
   { name: "Chiamaka Eze", matric: "AUL/ART/22/192", initials: "CE" },
@@ -7,7 +9,7 @@ export const recentRecipients = [
   { name: "Favour James", matric: "AUL/BUS/22/139", initials: "FJ" },
 ];
 
-export const recentTransfers = [
+export const demoRecentTransfers = [
   {
     id: "TRF-9842-DA7X",
     description: "Money from Tolu Adeyemi",
@@ -23,3 +25,5 @@ export const recentTransfers = [
     direction: "out",
   },
 ];
+*/
+export const recentTransfers = [];

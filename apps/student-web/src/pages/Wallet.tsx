@@ -13,12 +13,7 @@ import { Link } from "react-router-dom";
 import { formatKobo } from "@tapnpay/ui";
 import { EmptyState, PageHeading, usePortal } from "../portal/PortalShared";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const presetAmounts = [10000, 25000, 50000, 100000];
-
-type TopUpInitResponse = {
-  authorization_url: string;
-};
 
 export function WalletPage() {
   const { student } = usePortal();
@@ -26,7 +21,6 @@ export function WalletPage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [amountNaira, setAmountNaira] = useState(2000);
   const [customAmount, setCustomAmount] = useState("");
-  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const amountKobo = amountNaira * 100;
@@ -42,58 +36,26 @@ export function WalletPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isTopUpOpen]);
 
-  async function startTopUp() {
-    if (!student?.student_id || student.isLocal) {
-      setError(
-        "Wallet funding is unavailable until your account is registered with the card service.",
-      );
-      return;
-    }
-
-    setIsStartingCheckout(true);
-    setError("");
-    try {
-      const response = await fetch(`${API_BASE}/api/v1/topups/init`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          student_id: student.student_id,
-          amount_kobo: amountKobo,
-          email: student.email,
-        }),
-      });
-      const result = (await response.json()) as TopUpInitResponse & {
-        detail?: string;
-      };
-      if (!response.ok || !result.authorization_url) {
-        throw new Error(
-          result.detail || "The payment service could not start checkout.",
-        );
-      }
-      window.location.assign(result.authorization_url);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Unable to reach the payment service.",
-      );
-    } finally {
-      setIsStartingCheckout(false);
-    }
+  function startTopUp() {
+    setError("Wallet top-ups are not available through the NestJS API yet.");
   }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeading
         title="Wallet"
-        description="Manage your wallet and review wallet activity."
+        description="Wallet data and payments will appear when NestJS wallet endpoints are available."
       />
 
       <section className="rounded-2xl bg-[#342218] p-5 text-white sm:p-6">
         <p className="text-sm text-white/75">AUL Student Wallet</p>
         <div className="mt-2 flex items-center gap-2">
           <p className="text-3xl font-bold">
-            {balanceVisible ? formatKobo(student?.balance ?? 0) : "₦••••••"}
+            {balanceVisible
+              ? student?.balance === undefined
+                ? "Unavailable"
+                : formatKobo(student.balance)
+              : "₦••••••"}
           </p>
           <button
             aria-label={balanceVisible ? "Hide balance" : "Show balance"}
@@ -183,7 +145,9 @@ export function WalletPage() {
               <div className="mt-4 border-t border-white/20 pt-4">
                 <p className="text-xs text-[#F3B965]">Current balance</p>
                 <p className="mt-2 text-2xl font-bold">
-                  {formatKobo(student?.balance ?? 0)}
+                  {student?.balance === undefined
+                    ? "Unavailable"
+                    : formatKobo(student.balance)}
                 </p>
               </div>
             </div>
@@ -236,7 +200,6 @@ export function WalletPage() {
             <button
               className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#8A5A16] px-4 py-3 text-sm font-bold text-white hover:bg-[#70470F] disabled:cursor-not-allowed disabled:opacity-60"
               disabled={
-                isStartingCheckout ||
                 !Number.isFinite(amountNaira) ||
                 amountNaira < 100
               }
@@ -244,13 +207,11 @@ export function WalletPage() {
               type="button"
             >
               <ArrowUpRight aria-hidden="true" className="size-4" />
-              {isStartingCheckout
-                ? "Connecting to payment service…"
-                : `Top up ${formatKobo(amountKobo)} via Paystack`}
+              Top up {formatKobo(amountKobo)}
             </button>
             <p className="mt-4 flex items-center justify-center gap-2 text-xs text-[#8C857E]">
               <ShieldCheck aria-hidden="true" className="size-4" />
-              Secured by Paystack · SSL encrypted
+              NestJS wallet top-up service is not connected yet.
             </p>
             {error && (
               <p className="mt-3 text-sm text-red-700" role="alert">
@@ -274,8 +235,8 @@ export function WalletPage() {
         <div className="px-5 pb-5">
           <EmptyState
             icon={<ReceiptText className="size-5" />}
-            title="No wallet activity yet"
-            detail="Confirmed top-ups and fee payments will appear here when wallet history is available."
+            title="Wallet history unavailable"
+            detail="The NestJS API does not expose wallet transaction history yet."
           />
           <Link
             className="mt-4 inline-flex text-sm font-semibold text-[#8A5A16] no-underline hover:underline"

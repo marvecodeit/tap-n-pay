@@ -6,14 +6,14 @@ export const  userRoleEnum = pgEnum("user_role", ["student", "admin"]);
 export const student = pgTable("student", {
     id:uuid("id").defaultRandom().primaryKey(),
     matric_id:text("matric_id").notNull().unique(),
-    fullname:text("fullname").notNull().unique(),
+    fullname:text("fullname").notNull(),
     email:text("email").notNull().unique(),
     passwordHash:text("password_hash").notNull(),
     // walletBalanace:numeric("wallet_balance", {precision:6, scale:2}).default('0').notNull(), Wallet 
-    department:text("department").notNull().unique(),
-    faculty:text("faculty").notNull().unique(),
-    phonenumber:text("phone-number").notNull().unique(),
-    level:text("level").notNull().unique(),
+    department:text("department").notNull(),
+    faculty:text("faculty").notNull(),
+    phonenumber:text("phone-number").notNull(),
+    level:text("level").notNull(),
     role:userRoleEnum("role").notNull().default("student"),
 
     isVerified:boolean("is_verified").notNull().default(false),

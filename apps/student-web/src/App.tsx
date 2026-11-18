@@ -52,17 +52,16 @@ export function App() {
     return () => window.removeEventListener("message", handleLandingAction);
   }, []);
 
-  // Active student session
+  // Empty session until an account is loaded from the backend.
   const [student, setStudent] = useState<Student>({
-    student_id: "STU-001",
-    name: "John Okafor",
-    email: "john.okafor@university.edu.ng",
-    created_at: new Date().toISOString(),
-    active_card_id: "CARD-A3F2-9K2",
-    balance: 150000, // ₦1,500.00
+    student_id: "",
+    name: "",
+    created_at: "",
+    balance: 0,
   });
 
-  const [transactions, setTransactions] = useState<Transaction[]>([
+  /*
+  const demoStudentTransactions: Transaction[] = [
     {
       txn_id: "txn-7f3a-9b2c",
       card_id: "CARD-A3F2-9K2",
@@ -74,7 +73,9 @@ export function App() {
       status: "SYNCED",
       verification_code: "K7M2PQ",
     },
-  ]);
+  ];
+  */
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const handleAccountCreated = (newStudent: Student) => {
     setStudent(newStudent);

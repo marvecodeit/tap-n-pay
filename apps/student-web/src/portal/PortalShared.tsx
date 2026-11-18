@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { useOutletContext } from "react-router-dom";
-import type { Student } from "@tapnpay/api-client";
+import type { AuthenticatedStudent, Student } from "@tapnpay/api-client";
 
 export type StudentProfile = Student & {
   department?: string;
@@ -8,6 +8,20 @@ export type StudentProfile = Student & {
   level?: string;
   isLocal?: boolean;
 };
+
+export function toStudentProfile(account: AuthenticatedStudent): StudentProfile {
+  return {
+    student_id: account.student_id,
+    name: account.name,
+    email: account.email,
+    phone: account.phone,
+    created_at: account.created_at,
+    department: account.department,
+    faculty: account.faculty,
+    level: account.level,
+    isLocal: false,
+  };
+}
 
 export type PortalContext = {
   student: StudentProfile | null;

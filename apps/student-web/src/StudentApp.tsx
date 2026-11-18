@@ -4,10 +4,14 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
   useNavigate,
 } from "react-router-dom";
 import { StudentShell } from "./portal/StudentShell";
-import type { StudentProfile } from "./portal/PortalShared";
+import {
+  toStudentProfile,
+  type StudentProfile,
+} from "./portal/PortalShared";
 import { DashboardPage } from "./pages/Dashboard";
 import { HelpPage } from "./pages/Help";
 import { NotificationsPage } from "./pages/Notifications";
@@ -20,6 +24,12 @@ import { LoginPage } from "./pages/Login";
 import { PaymentResultPage } from "./pages/PaymentResult";
 import { RegisterPage } from "./pages/Register";
 import { TransferPage } from "./pages/Transfer";
+import {
+  api,
+  getApiErrorMessage,
+  isUnauthorizedApiError,
+  refreshStudentSession,
+} from "./lib/api";
 
 const landingPagesUrl =
   import.meta.env.VITE_LANDING_PAGES_URL || "http://localhost:5176";
@@ -55,18 +65,44 @@ function MarketingEntry() {
 }
 
 function StudentRoutes() {
-  const [student, setStudent] = useState<StudentProfile | null>(() => ({
-    student_id: "ACC/2021/0082",
-    name: "Daniel Okafor",
-    email: "daniel.okafor@university.edu.ng",
-    created_at: new Date().toISOString(),
-    active_card_id: "CARD-A3F2-9K2",
-    balance: 4_825_000,
-    department: "Accounting",
-    faculty: "Management",
-    level: "400",
-    isLocal: true,
-  }));
+  const location = useLocation();
+  const [student, setStudent] = useState<StudentProfile | null>(null);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+
+  useEffect(() => {
+    if (!location.pathname.startsWith("/dashboard") || student) {
+      setSessionLoaded(true);
+      return;
+    }
+
+    let active = true;
+
+    async function restoreSession() {
+      try {
+        await refreshStudentSession();
+        const account = await api.getCurrentStudent();
+        if (active) setStudent(toStudentProfile(account));
+      } catch (error) {
+        api.clearToken();
+        if (
+          active &&
+          !isUnauthorizedApiError(error)
+        ) {
+          setSessionError(
+            getApiErrorMessage(error, "Could not restore your student session."),
+          );
+        }
+      } finally {
+        if (active) setSessionLoaded(true);
+      }
+    }
+
+    void restoreSession();
+    return () => {
+      active = false;
+    };
+  }, [location.pathname, student]);
 
   function saveRegisteredStudent(account: StudentProfile) {
     setStudent(account);
@@ -76,24 +112,37 @@ function StudentRoutes() {
     setStudent(null);
   }
 
+  if (!sessionLoaded) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#F8F3EC] text-sm text-[#75685A]">
+        Connecting to TapNPay...
+      </main>
+    );
+  }
+
   return (
+    <>
     <Routes>
       <Route path="/" element={<MarketingEntry />} />
-      <Route path="/login" element={<LoginPage />} />
       <Route
-        path="/register"
-        element={<RegisterPage onRegistered={saveRegisteredStudent} />}
+        path="/login"
+        element={<LoginPage onAuthenticated={saveRegisteredStudent} />}
       />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/payment/:reference" element={<PaymentResultPage />} />
       <Route
         path="/dashboard"
         element={
-          <StudentShell
-            student={student}
-            setStudent={(value) =>
-              value ? saveRegisteredStudent(value) : clearStudent()
-            }
-          />
+          student ? (
+            <StudentShell
+              student={student}
+              setStudent={(value) =>
+                value ? saveRegisteredStudent(value) : clearStudent()
+              }
+            />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       >
         <Route index element={<DashboardPage />} />
@@ -108,6 +157,15 @@ function StudentRoutes() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    {sessionError && (
+      <p
+        className="fixed bottom-4 left-4 z-50 max-w-md rounded-lg border border-red-200 bg-white p-3 text-sm text-red-800 shadow-lg"
+        role="alert"
+      >
+        {sessionError}
+      </p>
+    )}
+    </>
   );
 }
 

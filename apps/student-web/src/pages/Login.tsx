@@ -1,22 +1,52 @@
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, Wallet } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  toStudentProfile,
+  type StudentProfile,
+} from "../portal/PortalShared";
+import { api, getApiErrorMessage } from "../lib/api";
 
-export function LoginPage() {
+export function LoginPage({
+  onAuthenticated,
+}: {
+  onAuthenticated: (student: StudentProfile) => void;
+}) {
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (!studentId.trim() || !password) {
       setError("Enter your student ID and password.");
       return;
     }
     setError("");
-    navigate("/dashboard");
+    setIsSubmitting(true);
+    try {
+      const { accessToken } = await api.login({
+        identifier: studentId.trim(),
+        password,
+      });
+      api.setToken(accessToken);
+      const account = await api.getCurrentStudent();
+      onAuthenticated(toStudentProfile(account));
+      navigate("/dashboard");
+    } catch (requestError) {
+      api.clearToken();
+      setError(
+        getApiErrorMessage(
+          requestError,
+          "Could not sign in. Check your details and try again.",
+        ),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -93,6 +123,7 @@ export function LoginPage() {
                 value={studentId}
                 onChange={(event) => setStudentId(event.target.value)}
                 placeholder="Enter your student ID"
+                disabled={isSubmitting}
               />
             </label>
             <label className="block text-sm font-semibold text-[#4F4235]">
@@ -108,6 +139,7 @@ export function LoginPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter your password"
+                  disabled={isSubmitting}
                 />
                 <button
                   aria-label={showPassword ? "Hide password" : "Show password"}
@@ -141,9 +173,11 @@ export function LoginPage() {
             )}
             <button
               className="w-full rounded-lg bg-[#8A5A16] py-3.5 text-base font-bold text-white shadow-[0_6px_14px_rgba(110,70,20,0.18)] transition-colors hover:bg-[#70470F]"
+              disabled={isSubmitting}
               type="submit"
             >
-              Log in <span aria-hidden="true">→</span>
+              {isSubmitting ? "Signing in..." : "Log in"}{" "}
+              <span aria-hidden="true">→</span>
             </button>
           </form>
 

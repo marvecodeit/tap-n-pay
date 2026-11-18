@@ -1,8 +1,6 @@
-# backend
+# Backend
 
-FastAPI backend service:
-- Student wallet balance (source of truth)
-- Paystack webhook handler (HMAC-verified)
-- POS terminal sync endpoints (`POST /sync/transactions`, `GET /sync/delta`)
-- Double-entry ledger records
-- Daily reconciliation invariants
+The active backend is the NestJS API in [`api`](./api). The legacy FastAPI
+implementation has been removed.
+
+See [`api/README.md`](./api/README.md) for setup and run instructions.

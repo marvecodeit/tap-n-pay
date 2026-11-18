@@ -2,13 +2,9 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
   ChevronRight,
-  Clock3,
   Search,
   Send,
-  ShieldCheck,
-  X,
 } from "lucide-react";
 import {
   recentRecipients,
@@ -17,8 +13,7 @@ import {
 } from "../data/transferRecipients.js";
 import { PageHeading } from "../portal/PortalShared";
 
-type TransferStep =
-  "find" | "amount" | "review" | "pending" | "success" | "failed";
+type TransferStep = "find" | "amount" | "review";
 
 function formatNaira(amount: number) {
   return `₦${amount.toLocaleString("en-NG")}.00`;
@@ -30,6 +25,7 @@ export function TransferPage() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [recipient, setRecipient] = useState<TransferRecipient | null>(null);
+  const [lookupNotice, setLookupNotice] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
 
   const matchedRecipients = useMemo(
@@ -52,20 +48,9 @@ export function TransferPage() {
     const match = matchedRecipients[0];
     if (match) {
       selectRecipient(match);
-      return;
+    } else {
+      setLookupNotice("Student search is not connected to the backend yet.");
     }
-
-    const initials = query
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("");
-    selectRecipient({
-      name: query.trim(),
-      matric: "Demo TapNPay Student",
-      initials: initials || "TS",
-    });
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -81,49 +66,7 @@ export function TransferPage() {
     setAmount("");
     setNote("");
     setRecipient(null);
-  }
-
-  if (step === "success" || step === "failed") {
-    const succeeded = step === "success";
-    return (
-      <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center">
-        <section className="w-full rounded-2xl border border-[#EADCCB] bg-white p-8 text-center shadow-sm sm:p-10">
-          <span
-            className={`mx-auto grid size-16 place-items-center rounded-full ${succeeded ? "bg-[#E8F3E8] text-[#176B3A]" : "bg-[#FBEAEA] text-[#A33B31]"}`}
-          >
-            {succeeded ? (
-              <Check className="size-8" />
-            ) : (
-              <X className="size-8" />
-            )}
-          </span>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-[#8A5A16]">
-            {succeeded ? "Transaction complete" : "Action needed"}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-[#34271A]">
-            {succeeded ? "Transfer successful" : "Transfer failed"}
-          </h1>
-          <p className="mt-3 text-base leading-relaxed text-[#75685A]">
-            {succeeded
-              ? `${formatNaira(Number(amount))} was sent to ${recipient?.name}. This is a demo; no funds were moved.`
-              : "The demo could not process this transfer. No funds were deducted."}
-          </p>
-          {succeeded && (
-            <div className="mt-6 rounded-xl bg-[#F8F3EC] px-4 py-3 text-sm">
-              <span className="text-[#75685A]">Reference </span>
-              <strong className="text-[#34271A]">TPN-9842-DA7X</strong>
-            </div>
-          )}
-          <button
-            className="mt-7 min-h-12 w-full rounded-lg bg-[#8A5A16] px-5 text-sm font-bold text-white transition-colors hover:bg-[#70470F]"
-            onClick={resetTransfer}
-            type="button"
-          >
-            Make another transfer
-          </button>
-        </section>
-      </div>
-    );
+    setLookupNotice("");
   }
 
   return (
@@ -197,14 +140,20 @@ export function TransferPage() {
                 />
                 {normalizedQuery && (
                   <button
-                    className="text-sm font-bold text-[#8A5A16] hover:text-[#70470F]"
-                    onClick={continueWithSearch}
-                    type="button"
+                  className="text-sm font-bold text-[#8A5A16] hover:text-[#70470F] disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={matchedRecipients.length === 0}
+                  onClick={continueWithSearch}
+                  type="button"
                   >
                     Continue
                   </button>
                 )}
               </div>
+              {lookupNotice && (
+                <p className="mt-3 text-sm text-[#75685A]" role="status">
+                  {lookupNotice}
+                </p>
+              )}
 
               <div className="mt-7 flex items-center justify-between border-b border-[#EADCCB] pb-2">
                 <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#75685A]">
@@ -245,7 +194,8 @@ export function TransferPage() {
                       No registered student found
                     </strong>
                     <p className="mt-1">
-                      Continue to use “{query.trim()}” as a demo recipient.
+                      Recipient lookup will be available when the student
+                      directory is connected.
                     </p>
                   </div>
                 )}
@@ -390,11 +340,11 @@ export function TransferPage() {
                 </div>
               </dl>
               <button
-                className="mt-5 min-h-12 w-full rounded-lg bg-[#8A5A16] px-5 text-sm font-bold text-white transition-colors hover:bg-[#70470F]"
-                onClick={() => setStep("pending")}
+                className="mt-5 min-h-12 w-full rounded-lg bg-[#8A5A16] px-5 text-sm font-bold text-white transition-colors hover:bg-[#70470F] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled
                 type="button"
               >
-                Confirm transfer
+                Transfer backend not connected
               </button>
               <button
                 className="mt-2 min-h-11 w-full rounded-lg px-5 text-sm font-semibold text-[#75685A] hover:bg-[#FCFAF7]"
@@ -406,40 +356,6 @@ export function TransferPage() {
             </div>
           )}
 
-          {step === "pending" && (
-            <div className="p-6 text-center sm:p-8">
-              <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#FBF1DD] text-[#8A5A16]">
-                <Clock3 aria-hidden="true" className="size-6" />
-              </span>
-              <h2 className="mt-4 text-xl font-bold text-[#34271A]">
-                Transfer pending
-              </h2>
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <button
-                  className="min-h-12 rounded-lg bg-[#8A5A16] px-4 text-sm font-bold text-white hover:bg-[#70470F]"
-                  onClick={() => setStep("success")}
-                  type="button"
-                >
-                  Confirm success
-                </button>
-                <button
-                  className="min-h-12 rounded-lg border border-[#EADCCB] px-4 text-sm font-bold text-[#6B5D4D] hover:bg-[#FCFAF7]"
-                  onClick={() => setStep("failed")}
-                  type="button"
-                >
-                  Simulate failure
-                </button>
-              </div>
-              <button
-                className="mt-3 min-h-10 px-4 text-sm font-semibold text-[#75685A] hover:text-[#34271A]"
-                onClick={resetTransfer}
-                type="button"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
         </section>
 
         <aside className="rounded-2xl border border-[#EADCCB] bg-white p-5 shadow-sm sm:p-6">
@@ -476,6 +392,11 @@ export function TransferPage() {
                 </strong>
               </article>
             ))}
+            {recentTransfers.length === 0 && (
+              <p className="py-5 text-sm text-[#75685A]">
+                Transfer history will appear when connected to the backend.
+              </p>
+            )}
           </div>
           <button
             className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#8A5A16] hover:text-[#70470F]"

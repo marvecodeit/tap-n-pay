@@ -23,6 +23,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import type { PortalContext } from "./PortalShared";
+import { api } from "../lib/api";
 
 const navigation = [
   { to: "/dashboard", label: "Overview", icon: Home, end: true },
@@ -60,6 +61,7 @@ function studentInitials(name?: string) {
 export function StudentShell({ student, setStudent }: PortalContext) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const profileMenuRef = useRef<HTMLDetailsElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -81,9 +83,19 @@ export function StudentShell({ student, setStudent }: PortalContext) {
     return () => document.removeEventListener("pointerdown", closeProfileMenu);
   }, []);
 
-  function logout() {
-    setStudent(null);
-    navigate("/login");
+  async function logout() {
+    setIsLoggingOut(true);
+    setNotice("");
+    try {
+      await api.logout();
+      api.clearToken();
+      setStudent(null);
+      navigate("/login");
+    } catch {
+      setNotice("Could not log out. Check your connection and try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   function showUnavailable(label: string) {
@@ -227,6 +239,7 @@ export function StudentShell({ student, setStudent }: PortalContext) {
             </div>
             <button
               className="mt-3 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-[#D0C5B6] hover:bg-[#302419] hover:text-white"
+              disabled={isLoggingOut}
               onClick={logout}
               type="button"
             >
@@ -278,6 +291,7 @@ export function StudentShell({ student, setStudent }: PortalContext) {
                 ))}
                 <button
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-[#6B5D4D] hover:bg-[#FBF8F3]"
+                  disabled={isLoggingOut}
                   onClick={logout}
                   type="button"
                 >

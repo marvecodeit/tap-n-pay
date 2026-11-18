@@ -38,7 +38,7 @@ export function TransactionList({
   if (!visibleTransactions.length) {
     return (
       <p className="px-5 py-10 text-center text-sm text-[#75685A]">
-        No sample transactions match these filters.
+        No transaction records are available yet.
       </p>
     );
   }

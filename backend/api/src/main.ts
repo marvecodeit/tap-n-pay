@@ -13,6 +13,15 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   app.use(cookieParser());
+  app.enableCors({
+    origin:
+      configService
+        .get<string>('CORS_ORIGINS')
+        ?.split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean) ?? ['http://localhost:5180'],
+    credentials: true,
+  });
 
   app.setGlobalPrefix("/api");
   app.useGlobalPipes(

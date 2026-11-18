@@ -49,14 +49,14 @@ export function Home({ student, recentTxns, onNavigate }: HomeProps) {
             {copied ? (
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
             ) : null}
-            {copied ? "Copied" : student.active_card_id || "CARD-A3F2-9K2"}
+            {copied ? "Copied" : student.active_card_id || "Card not issued"}
           </button>
         </div>
 
         <div className="space-y-1 mb-6">
           <span className="text-xs text-[#E5B452]">Available Balance</span>
           <div className="text-4xl font-extrabold tracking-tight font-mono">
-            {formatKobo(student.balance || 150000)}
+            {formatKobo(student.balance ?? 0)}
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export function Home({ student, recentTxns, onNavigate }: HomeProps) {
 
         {recentTxns.length === 0 ? (
           <div className="text-center py-6 text-slate-400 text-xs">
-            No transactions yet. Tap your card at the cafeteria POS!
+            Transactions will appear here once your account is connected.
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -131,7 +131,7 @@ export function Home({ student, recentTxns, onNavigate }: HomeProps) {
                     Meal Payment ({txn.terminal_id})
                   </span>
                   <span className="text-xs text-slate-400 font-mono">
-                    Code: {txn.verification_code || "K7M2PQ"} •{" "}
+                    Code: {txn.verification_code || "Unavailable"} •{" "}
                     {new Date(txn.created_at).toLocaleDateString()}
                   </span>
                 </div>
