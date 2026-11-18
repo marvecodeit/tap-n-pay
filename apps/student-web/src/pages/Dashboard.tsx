@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ArrowLeftRight,
   ArrowUpRight,
   CreditCard,
   Eye,
   EyeOff,
+  ImagePlus,
   Plus,
   Send,
   WalletCards,
@@ -13,7 +13,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { formatKobo } from "@tapnpay/ui";
 import { TransactionList } from "../components/TransactionList";
+import { mapWalletTransactions } from "../data/sampleTransactions";
 import { usePortal } from "../portal/PortalShared";
+import { api, getApiErrorMessage } from "../lib/api";
 
 type DashboardAction = {
   label: string;
@@ -45,13 +47,66 @@ const actions: DashboardAction[] = [
 ];
 
 export function DashboardPage() {
-  const { student } = usePortal();
+  const { student, setStudent } = usePortal();
   const navigate = useNavigate();
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImageUploading, setProfileImageUploading] = useState(false);
+  const [profileImageError, setProfileImageError] = useState("");
+  const [profileImageNotice, setProfileImageNotice] = useState("");
+  const [wallet, setWallet] = useState<
+    Awaited<ReturnType<typeof api.getStudentWallet>> | null
+  >(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+  const [balanceError, setBalanceError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const studentName = student?.name || "Student";
-  const balanceKobo = student?.balance;
+  const balanceKobo = wallet?.balanceKobo ?? null;
   const firstName = studentName.split(" ")[0];
+  const spendingTotals = wallet?.transactions.reduce(
+    (totals, transaction) => {
+      if (transaction.type === "debit") {
+        totals.spentKobo += transaction.amountKobo;
+      } else {
+        totals.receivedKobo += transaction.amountKobo;
+      }
+      return totals;
+    },
+    { spentKobo: 0, receivedKobo: 0 },
+  ) ?? { spentKobo: 0, receivedKobo: 0 };
+  const spendingScaleKobo = Math.max(
+    spendingTotals.spentKobo,
+    spendingTotals.receivedKobo,
+    1,
+  );
+  const recentTransactions = mapWalletTransactions(wallet?.transactions ?? []);
+
+  useEffect(() => {
+    let active = true;
+    setBalanceLoading(true);
+    setBalanceError("");
+
+    api
+      .getStudentWallet()
+      .then((result) => {
+        if (active) setWallet(result);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setBalanceError(
+            getApiErrorMessage(error, "Could not load your available balance."),
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setBalanceLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [student?.student_id]);
+
   function runAction(action: DashboardAction) {
     if (action.path) {
       navigate(action.path);
@@ -62,8 +117,108 @@ export function DashboardPage() {
     );
   }
 
+  async function uploadProfileImage() {
+    if (!profileImage) {
+      setProfileImageError("Choose a profile photo to upload.");
+      return;
+    }
+
+    setProfileImageUploading(true);
+    setProfileImageError("");
+    setProfileImageNotice("");
+    try {
+      const result = await api.uploadStudentProfileImage(profileImage);
+      if (student) {
+        setStudent({
+          ...student,
+          profile_image_url: result.profile_image_url,
+          is_profile_complete: result.is_profile_complete,
+        });
+      }
+      setProfileImage(null);
+      setProfileImageNotice("Your profile photo has been uploaded.");
+    } catch (error: unknown) {
+      setProfileImageError(
+        getApiErrorMessage(error, "Could not upload your profile photo. Try again."),
+      );
+    } finally {
+      setProfileImageUploading(false);
+    }
+  }
+
   return (
     <div className="w-full space-y-8">
+      {!student?.profile_image_url && (
+        <section className="rounded-2xl border border-[#E6C98F] bg-[#FFF9ED] p-5 sm:p-6">
+          <div className="flex items-start gap-4">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#F8EEDC] text-[#8A5A16]">
+              <ImagePlus aria-hidden="true" className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-bold text-[#34271A]">
+                Add your student profile photo
+              </h2>
+              <p className="mt-1 text-sm text-[#75685A]">
+                A profile photo helps verify your identity when using your student card.
+              </p>
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <label className="min-w-0 flex-1 text-sm font-medium text-[#34271A] sm:max-w-md">
+                  Choose a photo
+                  <input
+                    accept="image/jpeg,image/png,image/webp"
+                    className="mt-2 block w-full rounded-lg border border-[#EADCCB] bg-white px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-[#F8F0E5] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#70470F]"
+                    disabled={profileImageUploading}
+                    onChange={(event) => {
+                      const image = event.target.files?.[0] ?? null;
+                      if (
+                        image &&
+                        !["image/jpeg", "image/png", "image/webp"].includes(
+                          image.type,
+                        )
+                      ) {
+                        event.target.value = "";
+                        setProfileImage(null);
+                        setProfileImageError("Choose a JPEG, PNG, or WebP image.");
+                        return;
+                      }
+                      if (image && image.size > 5 * 1024 * 1024) {
+                        event.target.value = "";
+                        setProfileImage(null);
+                        setProfileImageError("Profile images must be 5 MB or smaller.");
+                        return;
+                      }
+                      setProfileImageError("");
+                      setProfileImage(image);
+                    }}
+                    type="file"
+                  />
+                </label>
+                <button
+                  className="min-h-10 rounded-lg bg-[#8A5A16] px-4 py-2 text-sm font-semibold text-white hover:bg-[#70470F] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={!profileImage || profileImageUploading}
+                  onClick={uploadProfileImage}
+                  type="button"
+                >
+                  {profileImageUploading ? "Uploading..." : "Upload photo"}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[#75685A]">
+                JPEG, PNG, or WebP; up to 5 MB.
+              </p>
+              {profileImageError && (
+                <p className="mt-3 text-sm text-red-700" role="alert">
+                  {profileImageError}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+      {profileImageNotice && (
+        <p className="text-sm text-green-800" role="status">
+          {profileImageNotice}
+        </p>
+      )}
       <header>
         <div>
           <span className="text-xs font-bold uppercase tracking-wide text-[#8A5A16]">
@@ -102,12 +257,19 @@ export function DashboardPage() {
             </button>
           </div>
           <p className="relative z-10 mt-6 text-4xl font-bold sm:text-5xl">
-            {balanceVisible
-              ? balanceKobo === undefined
-                ? "Unavailable"
-                : formatKobo(balanceKobo)
-              : "₦••,•••.••"}
+            {!balanceVisible
+              ? "₦••,•••.••"
+              : balanceLoading
+                ? "Loading..."
+                : balanceKobo === null
+                  ? "Unavailable"
+                  : formatKobo(balanceKobo)}
           </p>
+          {balanceError && (
+            <p className="relative z-10 mt-2 text-sm text-red-100" role="alert">
+              {balanceError}
+            </p>
+          )}
           <div className="relative z-10 mt-8 flex flex-wrap gap-3">
             <button
               className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#D7A34F] px-4 py-2 text-sm font-semibold text-[#34271A] hover:bg-[#E2B665]"
@@ -140,8 +302,65 @@ export function DashboardPage() {
               </h2>
             </div>
           </div>
-          <div className="mt-7 grid h-32 place-items-center rounded-lg bg-[#FCFAF7] px-5 text-center text-sm text-[#75685A]">
-            Spending overview will appear when account activity is connected.
+          <div className="mt-5 space-y-5 rounded-lg bg-[#FCFAF7] p-5">
+            {balanceLoading ? (
+              <p className="text-sm text-[#75685A]" role="status">
+                Loading wallet activity...
+              </p>
+            ) : balanceError ? (
+              <p className="text-sm text-[#75685A]">
+                Spending overview is unavailable until wallet activity loads.
+              </p>
+            ) : !wallet?.transactions.length ? (
+              <p className="text-sm text-[#75685A]">
+                Spending overview will appear when you have wallet activity.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-[#75685A]">
+                  Based on your{" "}
+                  {wallet.transactions.length === 50
+                    ? "latest 50 wallet transactions"
+                    : "wallet transactions"}
+                  .
+                </p>
+                {[
+                  {
+                    label: "Money out",
+                    amountKobo: spendingTotals.spentKobo,
+                    color: "bg-[#8A5A16]",
+                  },
+                  {
+                    label: "Money in",
+                    amountKobo: spendingTotals.receivedKobo,
+                    color: "bg-[#176B3A]",
+                  },
+                ].map(({ label, amountKobo, color }) => (
+                  <div key={label}>
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                      <span className="font-medium text-[#53645A]">
+                        {label}
+                      </span>
+                      <strong className="text-[#34271A]">
+                        {formatKobo(amountKobo)}
+                      </strong>
+                    </div>
+                    <div
+                      aria-label={`${label}: ${formatKobo(amountKobo)}`}
+                      className="h-2 overflow-hidden rounded-full bg-[#EADCCB]"
+                      role="img"
+                    >
+                      <div
+                        className={`h-full rounded-full ${color}`}
+                        style={{
+                          width: `${(amountKobo / spendingScaleKobo) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -200,11 +419,17 @@ export function DashboardPage() {
             <ArrowUpRight aria-hidden="true" className="size-4" />
           </button>
         </div>
-        <TransactionList
-          transactions={[]}
-          limit={3}
-          onTransactionClick={() => navigate("/dashboard/transactions")}
-        />
+        {balanceLoading ? (
+          <p className="px-5 py-10 text-center text-sm text-[#75685A]" role="status">
+            Loading recent transactions...
+          </p>
+        ) : (
+          <TransactionList
+            transactions={recentTransactions}
+            limit={3}
+            onTransactionClick={() => navigate("/dashboard/transactions")}
+          />
+        )}
       </section>
 
       {actionMessage && (

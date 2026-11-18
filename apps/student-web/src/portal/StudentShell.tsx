@@ -58,6 +58,31 @@ function studentInitials(name?: string) {
     .join("");
 }
 
+function StudentAvatar({
+  name,
+  imageUrl,
+  className,
+}: {
+  name: string;
+  imageUrl?: string | null;
+  className: string;
+}) {
+  return imageUrl ? (
+    <img
+      alt={`Profile photo of ${name}`}
+      className={`${className} rounded-full object-cover`}
+      referrerPolicy="no-referrer"
+      src={imageUrl}
+    />
+  ) : (
+    <span
+      className={`${className} grid place-items-center rounded-full bg-[#D7A34F] text-sm font-bold text-[#241B12]`}
+    >
+      {studentInitials(name)}
+    </span>
+  );
+}
+
 export function StudentShell({ student, setStudent }: PortalContext) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
@@ -66,6 +91,12 @@ export function StudentShell({ student, setStudent }: PortalContext) {
   const location = useLocation();
   const navigate = useNavigate();
   const studentName = student?.name || "Student account";
+  const profileStatus =
+    student?.is_profile_complete === undefined
+      ? "Student"
+      : student.is_profile_complete
+        ? "Profile complete"
+        : "Profile incomplete";
   const activeSection =
     navigation.find(({ to }) => to === location.pathname) ?? navigation[0];
 
@@ -120,20 +151,27 @@ export function StudentShell({ student, setStudent }: PortalContext) {
               <span className="block text-xs text-[#75685A]">Student</span>
             </span>
           </Link>
-          <button
-            aria-label={
-              mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
-            }
-            className="grid size-10 place-items-center rounded-lg text-[#6B5D4D] hover:bg-[#F8F0E5]"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            type="button"
-          >
-            {mobileMenuOpen ? (
-              <X className="size-5" />
-            ) : (
-              <Menu className="size-5" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <StudentAvatar
+              className="size-9 shrink-0"
+              imageUrl={student?.profile_image_url}
+              name={studentName}
+            />
+            <button
+              aria-label={
+                mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
+              }
+              className="grid size-10 place-items-center rounded-lg text-[#6B5D4D] hover:bg-[#F8F0E5]"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              type="button"
+            >
+              {mobileMenuOpen ? (
+                <X className="size-5" />
+              ) : (
+                <Menu className="size-5" />
+              )}
+            </button>
+          </div>
         </div>
         {mobileMenuOpen && (
           <nav
@@ -225,15 +263,20 @@ export function StudentShell({ student, setStudent }: PortalContext) {
           ))}
           <div className="mt-5 border-t border-[#4A3B2A] pt-4">
             <div className="flex items-center gap-3 px-2">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#D7A34F] text-sm font-bold text-[#241B12]">
-                {studentInitials(student?.name)}
-              </span>
+              <StudentAvatar
+                className="size-10 shrink-0"
+                imageUrl={student?.profile_image_url}
+                name={studentName}
+              />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold text-white">
                   {studentName}
                 </span>
                 <span className="mt-1 block truncate text-xs text-[#B7A995]">
                   {student?.student_id || "Student"}
+                </span>
+                <span className="mt-1 block truncate text-[11px] text-[#D7A34F]">
+                  {profileStatus}
                 </span>
               </span>
             </div>
@@ -268,13 +311,15 @@ export function StudentShell({ student, setStudent }: PortalContext) {
             </Link>
             <details className="relative" ref={profileMenuRef}>
               <summary className="flex cursor-pointer list-none items-center gap-3 text-sm font-semibold text-[#34271A]">
-                <span className="grid size-10 place-items-center rounded-full bg-[#B8F2D9] text-sm font-bold text-[#07583B]">
-                  {studentInitials(student?.name)}
-                </span>
+                <StudentAvatar
+                  className="size-10 shrink-0"
+                  imageUrl={student?.profile_image_url}
+                  name={studentName}
+                />
                 <span>
                   <span className="block">{studentName}</span>
                   <span className="mt-0.5 block text-xs font-normal text-[#9A8874]">
-                    Student
+                    {profileStatus}
                   </span>
                 </span>
               </summary>

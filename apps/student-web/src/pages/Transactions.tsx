@@ -1,21 +1,58 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { TransactionList } from "../components/TransactionList";
 import {
   formatTransactionDate,
-  sampleTransactions,
+  mapWalletTransactions,
   type TransactionDirection,
 } from "../data/sampleTransactions";
-import { PageHeading } from "../portal/PortalShared";
+import { api, getApiErrorMessage } from "../lib/api";
+import { PageHeading, usePortal } from "../portal/PortalShared";
 
 export function TransactionsPage() {
+  const { student } = usePortal();
+  const [transactions, setTransactions] = useState<
+    ReturnType<typeof mapWalletTransactions>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [status, setStatus] = useState("all");
   const [direction, setDirection] = useState<"all" | TransactionDirection>(
     "all",
   );
   const [fromDate, setFromDate] = useState("");
-  const filteredTransactions = sampleTransactions.filter((transaction) => {
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+
+    api
+      .getStudentWallet()
+      .then((wallet) => {
+        if (active) setTransactions(mapWalletTransactions(wallet.transactions));
+      })
+      .catch((requestError: unknown) => {
+        if (active) {
+          setError(
+            getApiErrorMessage(
+              requestError,
+              "Could not load your transactions.",
+            ),
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [student?.student_id]);
+
+  const filteredTransactions = transactions.filter((transaction) => {
     const matchesStatus = status === "all" || transaction.status === status;
     const matchesDate = !fromDate || transaction.date >= fromDate;
     const matchesDirection =
@@ -81,7 +118,7 @@ export function TransactionsPage() {
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeading
         title="Transactions"
-        description="A complete view of payments, transfers and money received."
+        description="Your latest wallet transactions, including money sent and received."
       />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap items-end gap-3">
@@ -157,7 +194,17 @@ export function TransactionsPage() {
           <h2 className="font-bold text-[#34271A]">Recent activity</h2>
           <span className="text-xs text-[#75685A]">Transaction records</span>
         </div>
-        <TransactionList transactions={filteredTransactions} />
+        {loading ? (
+          <p className="px-5 py-10 text-center text-sm text-[#75685A]" role="status">
+            Loading transactions...
+          </p>
+        ) : error ? (
+          <p className="px-5 py-10 text-center text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        ) : (
+          <TransactionList transactions={filteredTransactions} />
+        )}
       </section>
       <Link
         className="inline-flex text-sm font-semibold text-[#8A5A16] no-underline hover:text-[#70470F]"

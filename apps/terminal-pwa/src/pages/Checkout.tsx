@@ -13,16 +13,8 @@ import { PriceKeypad } from "../components/PriceKeypad";
 import { ScanListener } from "../components/ScanListener";
 import { StudentIdentity } from "../components/StudentIdentity";
 import { ApprovalScreen } from "../components/ApprovalScreen";
-import { demoCards } from "../data/demoCards";
-import {
-  CardBlockedError,
-  CardNotFoundError,
-  debitCard,
-  getCard,
-  restoreCardBalance,
-} from "../db/balances";
-import { logTransaction } from "../db/transactions";
-import { getTerminalConfig } from "../db/syncState";
+import { CardNotFoundError } from "../db/balances";
+import { debitScannedStudentWallet, getScannedStudentCard } from "../lib/studentProfile";
 
 interface CheckoutProps {
   onTransactionComplete: () => void | Promise<void>;
@@ -30,10 +22,8 @@ interface CheckoutProps {
 }
 
 function errorText(error: unknown) {
-  if (error instanceof CardBlockedError)
-    return "This card is blocked. Please direct the student to campus administration.";
   if (error instanceof CardNotFoundError)
-    return "Card not recognized. Ask the student to tap their card again.";
+    return "No registered student matches this matric ID. Please scan again.";
   return error instanceof Error
     ? error.message
     : "Unable to complete checkout. Please try again.";
@@ -50,9 +40,11 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const processingRef = useRef(false);
+  const paymentReferenceRef = useRef<string | null>(null);
 
   async function handleScan(cardId: string) {
     setErrorMessage("");
+    paymentReferenceRef.current = null;
     if (amountKobo <= 0) {
       setErrorMessage("Enter a purchase amount before scanning a student card.");
       return;
@@ -60,13 +52,14 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
 
     setIsScanning(true);
     try {
-      const [card] = await Promise.all([
-        getCard(cardId),
+      const [scanResult] = await Promise.all([
+        getScannedStudentCard(cardId),
         new Promise<void>((resolve) => window.setTimeout(resolve, 900)),
       ]);
+      const card = scanResult?.card;
       if (!card) throw new CardNotFoundError();
-      if (card.blocked === 1) throw new CardBlockedError();
       setScannedCard(card);
+      paymentReferenceRef.current = `POS-${crypto.randomUUID()}`;
     } catch (error) {
       setScannedCard(null);
       setErrorMessage(errorText(error));
@@ -82,27 +75,14 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
     setErrorMessage("");
 
     try {
-      const updated = await debitCard(scannedCard.card_id, amountKobo);
-      let transaction: Transaction;
-      try {
-        const config = await getTerminalConfig();
-        transaction = await logTransaction({
-          card_id: updated.card_id,
-          student_name: updated.student_name,
-          amount: amountKobo,
-          terminal_id: config.terminal_id,
-          cashier_id: config.cashier_id,
-        });
-      } catch (error) {
-        try {
-          await restoreCardBalance(updated.card_id, amountKobo);
-        } catch (restoreError) {
-          throw new Error(
-            `Transaction could not be saved, and the balance rollback failed: ${errorText(restoreError)}`,
-          );
-        }
-        throw error;
-      }
+      const reference =
+        paymentReferenceRef.current ?? `POS-${crypto.randomUUID()}`;
+      paymentReferenceRef.current = reference;
+      const { card: updated, transaction } = await debitScannedStudentWallet(
+        scannedCard,
+        amountKobo,
+        reference,
+      );
 
       setUpdatedCard(updated);
       setCompletedTxn(transaction);
@@ -129,6 +109,7 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
     setScannedCard(null);
     setAmountKobo(0);
     setErrorMessage("");
+    paymentReferenceRef.current = null;
     setShowCancelConfirmation(false);
   }
 
@@ -150,6 +131,7 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
     setAmountKobo(0);
     setErrorMessage("");
     setHistoryNotice("");
+    paymentReferenceRef.current = null;
   }
 
   if (completedTxn && updatedCard) {
@@ -179,8 +161,8 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
           </h1>
           <p className="mt-1 text-xs text-[#75685A] sm:text-sm">
             {scannedCard
-              ? "Confirm the cardholder and transaction details."
-              : "Enter the total, then ask the student to scan their card."}
+              ? "Confirm the student and transaction details."
+              : "Enter the total, then scan the student's matric barcode."}
           </p>
         </div>
         <ol
@@ -311,6 +293,7 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
               onChange={(amount) => {
                 setAmountKobo(amount);
                 setScannedCard(null);
+                paymentReferenceRef.current = null;
                 setErrorMessage("");
               }}
               disabled={isProcessing}
@@ -320,12 +303,10 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
             <ScanListener
               onScan={handleScan}
               disabled={isProcessing || isScanning || amountKobo <= 0}
-              onScanClick={() => {
-                if (amountKobo > 0) void handleScan(demoCards[0].card_id);
-              }}
               compact
               waitingForAmount={amountKobo <= 0}
               scanning={isScanning}
+              autoFocus
             />
           </section>
         </div>
@@ -377,6 +358,15 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
                 </span>
               </span>
             </div>
+            {scannedCard.is_profile_complete === false && (
+              <p
+                className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900"
+                role="status"
+              >
+                This student profile is incomplete. Ask the student to complete
+                their profile before taking payment.
+              </p>
+            )}
             <p className="mt-5 text-xs text-[#8B8072]">
               Transaction amount
             </p>
@@ -406,12 +396,16 @@ export function Checkout({ onTransactionComplete, onViewHistory }: CheckoutProps
             <div className="mt-auto space-y-2 pt-4">
               <button
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#95601D] px-4 py-3 text-xs font-bold text-white shadow-[0_8px_18px_rgba(74,49,21,0.12)] transition-colors hover:bg-[#7D4F17] disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={isProcessing || amountKobo <= 0}
+                disabled={
+                  isProcessing ||
+                  amountKobo <= 0 ||
+                  scannedCard.is_profile_complete === false
+                }
                 onClick={confirmPayment}
                 type="button"
               >
                 <LockKeyhole aria-hidden="true" className="size-4" />
-                {isProcessing ? "Processing locally…" : "Confirm payment"}
+                {isProcessing ? "Processing payment…" : "Confirm payment"}
                 {!isProcessing && (
                   <ArrowRight aria-hidden="true" className="size-4" />
                 )}

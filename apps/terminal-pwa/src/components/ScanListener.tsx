@@ -1,26 +1,100 @@
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { AlertCircle, CreditCard, LoaderCircle, ScanLine } from "lucide-react";
 
 interface ScanListenerProps {
   onScan: (cardId: string) => void;
-  onScanClick?: () => void;
   disabled?: boolean;
   compact?: boolean;
   waitingForAmount?: boolean;
   scanning?: boolean;
+  autoFocus?: boolean;
 }
 
 export function ScanListener({
   onScan,
-  onScanClick,
   disabled = false,
   compact = false,
   waitingForAmount = false,
   scanning = false,
+  autoFocus = false,
 }: ScanListenerProps) {
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(0);
+  const scanTimeoutRef = useRef<number | null>(null);
+  const scannerInputRef = useRef<HTMLInputElement>(null);
   const [scanNotice, setScanNotice] = useState("");
+  const [scannerFocused, setScannerFocused] = useState(false);
+
+  function submitScan() {
+    if (scanTimeoutRef.current !== null) {
+      window.clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
+    const cardId = bufferRef.current.trim().toUpperCase();
+    bufferRef.current = "";
+    if (scannerInputRef.current) scannerInputRef.current.value = "";
+    if (!cardId) return;
+    if (cardId.length < 6) {
+      setScanNotice("Barcode was not recognized. Please scan again.");
+      return;
+    }
+    setScanNotice("");
+    onScan(cardId);
+  }
+
+  function handleScannerKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" && event.key !== "Tab") return;
+    event.preventDefault();
+    submitScan();
+  }
+
+  function handleScannerChange(value: string) {
+    bufferRef.current = value;
+    if (scanTimeoutRef.current !== null) {
+      window.clearTimeout(scanTimeoutRef.current);
+    }
+    scanTimeoutRef.current = window.setTimeout(submitScan, 250);
+  }
+
+  useEffect(() => {
+    if (!autoFocus || disabled || waitingForAmount || scanning) return;
+    const activeElement = document.activeElement;
+    if (
+      activeElement instanceof HTMLInputElement &&
+      activeElement.getAttribute("aria-label") === "Purchase amount in naira"
+    ) {
+      return;
+    }
+    scannerInputRef.current?.focus();
+  }, [autoFocus, disabled, scanning, waitingForAmount]);
+
+  useEffect(
+    () => () => {
+      if (scanTimeoutRef.current !== null) {
+        window.clearTimeout(scanTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!autoFocus || disabled || waitingForAmount || scanning) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement &&
+        target.getAttribute("aria-label") === "Purchase amount in naira"
+      ) {
+        return;
+      }
+      window.requestAnimationFrame(() => scannerInputRef.current?.focus());
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [autoFocus, disabled, scanning, waitingForAmount]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -39,18 +113,15 @@ export function ScanListener({
       lastKeyTimeRef.current = now;
 
       if (event.key === "Enter" || event.key === "Tab") {
-        const cardId = bufferRef.current.trim().toUpperCase();
-        bufferRef.current = "";
-        if (!cardId) return;
+        if (!bufferRef.current) return;
         event.preventDefault();
-        if (cardId.length < 6) {
-          setScanNotice("Card scan was not recognized. Please scan again.");
-          return;
-        }
-        setScanNotice("");
-        onScan(cardId);
+        submitScan();
       } else if (event.key.length === 1) {
         bufferRef.current += event.key;
+        if (scanTimeoutRef.current !== null) {
+          window.clearTimeout(scanTimeoutRef.current);
+        }
+        scanTimeoutRef.current = window.setTimeout(submitScan, 250);
       }
     }
 
@@ -68,6 +139,20 @@ export function ScanListener({
     >
       {compact ? (
         <>
+          <input
+            aria-label="Barcode scanner input"
+            autoComplete="off"
+            className="sr-only"
+            disabled={disabled || waitingForAmount}
+            inputMode="none"
+            onBlur={() => setScannerFocused(false)}
+            onChange={(event) => handleScannerChange(event.currentTarget.value)}
+            onFocus={() => setScannerFocused(true)}
+            onKeyDown={handleScannerKeyDown}
+            ref={scannerInputRef}
+            tabIndex={-1}
+            type="text"
+          />
           <div
             aria-hidden={waitingForAmount}
             className={`flex w-full max-w-md flex-col items-center transition-[filter,opacity] duration-200 ${
@@ -84,18 +169,16 @@ export function ScanListener({
               Scan student card
             </p>
             <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-[#8B8072]">
-              Ask the student to tap their physical card on the connected
-              scanner.
+              Scanner focuses automatically after amount entry. If you typed the
+              amount, click Focus scanner before scanning the matric ID.
             </p>
             <button
               aria-live="polite"
-              className={`mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold text-white shadow-[0_8px_18px_rgba(74,49,21,0.12)] transition-colors disabled:cursor-not-allowed ${
-                scanning
-                  ? "bg-[#A9906B]"
-                  : "bg-[#95601D] hover:bg-[#7D4F17] disabled:opacity-50"
+              className={`mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                scanning || scannerFocused ? "bg-[#A9906B]" : "bg-[#95601D]"
               }`}
               disabled={disabled || waitingForAmount || scanning}
-              onClick={onScanClick}
+              onClick={() => scannerInputRef.current?.focus()}
               type="button"
             >
               {scanning ? (
@@ -106,13 +189,21 @@ export function ScanListener({
               ) : (
                 <CreditCard aria-hidden="true" className="size-4" />
               )}
-              {scanning ? "Scanning card..." : "Scan student card"}
+              {scanning
+                ? "Checking student..."
+                : scannerFocused
+                  ? "Scanner ready — scan matric barcode"
+                  : "Focus scanner"}
             </button>
             <span
               aria-live="polite"
               className="mt-3 text-xs font-semibold text-emerald-700"
             >
-              {scanning ? "Keep the card on the scanner" : "Scanner is ready"}
+              {scanning
+                ? "Loading student details"
+                : scannerFocused
+                  ? "Scan now, then review and authorize the payment"
+                  : "Scan starts automatically after the barcode is read"}
             </span>
           </div>
           {waitingForAmount && (

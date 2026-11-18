@@ -1,6 +1,8 @@
 export interface Student {
   student_id: string;
   name: string;
+  profile_image_url?: string | null;
+  is_profile_complete?: boolean;
   email?: string;
   phone?: string;
   created_at: string;
@@ -17,6 +19,8 @@ export interface AuthenticatedStudent {
   department: string;
   faculty: string;
   level: string;
+  profile_image_url?: string | null;
+  is_profile_complete: boolean;
 }
 
 export interface StudentRegistrationRequest {
@@ -28,10 +32,27 @@ export interface StudentRegistrationRequest {
   department: string;
   faculty: string;
   level: string;
+  profileImage: File;
 }
 
 export interface AuthTokenResponse {
   accessToken: string;
+}
+
+export interface StudentWalletTransaction {
+  id: string;
+  type: "credit" | "debit";
+  amountKobo: number;
+  balanceAfterKobo: number;
+  reference: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface StudentWalletResponse {
+  id: string;
+  balanceKobo: number;
+  transactions: StudentWalletTransaction[];
 }
 
 export interface StudentLoginRequest {
@@ -59,6 +80,11 @@ export interface Card {
   version: number;
   blocked: number; // 0 or 1
   issued_at: string;
+  profile_image_url?: string | null;
+  is_profile_complete?: boolean;
+  department?: string;
+  faculty?: string;
+  level?: string;
 }
 
 export type TransactionStatus = "PENDING" | "APPROVED" | "VOID" | "SYNCED" | "FAILED";

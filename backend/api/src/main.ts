@@ -19,11 +19,15 @@ async function bootstrap() {
     ?.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const corsOrigins = configuredCorsOrigins?.length
+    ? configuredCorsOrigins
+    : ['http://localhost:5180', 'http://localhost:5181'];
+  if (configService.get<string>('NODE_ENV') !== 'production') {
+    corsOrigins.push('http://localhost:5174');
+  }
 
   app.enableCors({
-    origin: configuredCorsOrigins?.length
-      ? configuredCorsOrigins
-      : ['http://localhost:5180', 'http://localhost:5181'],
+    origin: [...new Set(corsOrigins)],
     credentials: true,
   });
 

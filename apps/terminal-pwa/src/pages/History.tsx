@@ -107,13 +107,13 @@ export function History({ transactions, onRefresh }: HistoryProps) {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8C5E1E]">
-            Local activity
+            Online activity
           </p>
           <h1 className="mt-1 font-sora text-[25px] font-bold tracking-tight text-[#231B12] sm:text-[36px]">
             Transaction history
           </h1>
           <p className="mt-1 text-sm text-[#75685A]">
-            Payments recorded by this terminal.
+          Wallet payments recorded by this terminal.
           </p>
         </div>
         <span className="rounded-full border border-[#E8DDCB] bg-white px-3 py-1.5 text-xs font-medium text-[#75685A]">
@@ -191,7 +191,7 @@ export function History({ transactions, onRefresh }: HistoryProps) {
                 : "No transactions match these filters."}
             </p>
             <p className="mt-1 text-base text-[#8B8072]">
-              Completed demo payments will appear here.
+              Completed wallet payments will appear here.
             </p>
           </div>
         ) : (

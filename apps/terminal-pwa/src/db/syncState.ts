@@ -6,6 +6,7 @@ export interface TerminalConfig {
   cashier_name: string;
   cafeteria_name: string;
   api_base_url: string;
+  terminal_api_key: string;
 }
 
 export const DEFAULT_CONFIG: TerminalConfig = {
@@ -13,7 +14,8 @@ export const DEFAULT_CONFIG: TerminalConfig = {
   cashier_id: "c-001",
   cashier_name: "Cashier A",
   cafeteria_name: "Central Cafeteria",
-  api_base_url: "http://localhost:8000",
+  api_base_url: "http://localhost:3000",
+  terminal_api_key: "",
 };
 
 export const OFFLINE_LIMITS = {
@@ -35,7 +37,11 @@ export async function setSyncState<T>(key: string, value: T): Promise<void> {
 }
 
 export async function getTerminalConfig(): Promise<TerminalConfig> {
-  return getSyncState<TerminalConfig>("terminal_config", DEFAULT_CONFIG);
+  const config = await getSyncState<Partial<TerminalConfig>>(
+    "terminal_config",
+    DEFAULT_CONFIG,
+  );
+  return { ...DEFAULT_CONFIG, ...config };
 }
 
 export async function setTerminalConfig(config: TerminalConfig): Promise<void> {

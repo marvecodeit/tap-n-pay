@@ -7,6 +7,8 @@ export const student = pgTable("student", {
     id:uuid("id").defaultRandom().primaryKey(),
     matric_id:text("matric_id").notNull().unique(),
     fullname:text("fullname").notNull(),
+    profileImagePublicId:text("profile_image_public_id"),
+    profileImageFormat:text("profile_image_format"),
     email:text("email").notNull().unique(),
     passwordHash:text("password_hash").notNull(),
     // walletBalanace:numeric("wallet_balance", {precision:6, scale:2}).default('0').notNull(), Wallet 

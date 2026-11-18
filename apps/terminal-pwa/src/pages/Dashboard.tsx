@@ -9,25 +9,23 @@ import {
   UserRound,
   WalletCards,
   Wifi,
+  Settings,
 } from "lucide-react";
 import { Checkout } from "./Checkout";
 import { BalanceCheck } from "./BalanceCheck";
 import { History } from "./History";
-import { getCard, saveCardsBatch } from "../db/balances";
+import { Setup } from "./Setup";
 import {
   getRecentTransactions,
-  seedFailedDemoTransactions,
+  removeDemoTransactions,
 } from "../db/transactions";
 import {
-  getSyncState,
   getTerminalConfig,
-  setSyncState,
   type TerminalConfig,
 } from "../db/syncState";
-import { demoCards } from "../data/demoCards";
 import type { Transaction } from "@tapnpay/api-client";
 
-type Tab = "checkout" | "balance" | "history";
+type Tab = "checkout" | "balance" | "history" | "settings";
 
 const navigation: {
   id: Tab;
@@ -37,6 +35,7 @@ const navigation: {
   { id: "checkout", label: "Checkout", icon: CreditCard },
   { id: "balance", label: "Balance check", icon: WalletCards },
   { id: "history", label: "Transactions", icon: HistoryIcon },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export function Dashboard() {
@@ -89,42 +88,8 @@ export function Dashboard() {
 
     async function initialize() {
       try {
-        const missingCards = [];
-        const demoBalanceUpdated = await getSyncState(
-          "demo_balance_500000_migrated",
-          false,
-        );
-        for (const card of demoCards) {
-          const savedCard = await getCard(card.card_id);
-          // Demo balances are disposable test data; recover cards made negative
-          // by earlier versions that allowed a checkout to overdraw them.
-          if (
-            !savedCard ||
-            savedCard.balance < 0 ||
-            (card.card_id === demoCards[0].card_id && !demoBalanceUpdated)
-          ) {
-            missingCards.push(card);
-          } else if (
-            savedCard.student_id !== card.student_id ||
-            savedCard.student_name !== card.student_name
-          ) {
-            missingCards.push({
-              ...savedCard,
-              student_id: card.student_id,
-              student_name: card.student_name,
-            });
-          }
-        }
-        if (missingCards.length > 0) await saveCardsBatch(missingCards);
-        if (!demoBalanceUpdated) {
-          await setSyncState("demo_balance_500000_migrated", true);
-        }
         const terminalConfig = await getTerminalConfig();
-        await seedFailedDemoTransactions(
-          demoCards,
-          terminalConfig.terminal_id,
-          terminalConfig.cashier_id,
-        );
+        await removeDemoTransactions();
         const recentTransactions = await getRecentTransactions();
         if (active) {
           setConfig(terminalConfig);
@@ -135,7 +100,7 @@ export function Dashboard() {
           setStorageError(
             error instanceof Error
               ? error.message
-              : "Could not open this terminal's local demo data.",
+              : "Could not load this terminal's configuration.",
           );
         }
       }
@@ -294,10 +259,11 @@ export function Dashboard() {
               onRefresh={refreshTransactions}
             />
           )}
+          {activeTab === "settings" && <Setup />}
 
           <footer className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-[#E8DDCB] pt-3 text-xs text-[#8B8072]">
             <span>
-              {config?.terminal_id || "POS-001"} · Local demo terminal
+              {config?.terminal_id || "POS-001"} · Online wallet terminal
             </span>
             <span className="inline-flex items-center gap-2">
               <Store aria-hidden="true" className="size-4" />

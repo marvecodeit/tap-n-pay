@@ -9,8 +9,8 @@ import type { Card } from "@tapnpay/api-client";
 import { formatKobo } from "@tapnpay/ui";
 import { ScanListener } from "../components/ScanListener";
 import { StudentIdentity } from "../components/StudentIdentity";
-import { demoCards, demoStudentDetails } from "../data/demoCards";
-import { CardNotFoundError, getCard } from "../db/balances";
+import { CardNotFoundError } from "../db/balances";
+import { getScannedStudentCard } from "../lib/studentProfile";
 
 export function BalanceCheck({ onBack }: { onBack: () => void }) {
   const [card, setCard] = useState<Card | null>(null);
@@ -22,10 +22,11 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
     setError("");
     setIsScanning(true);
     try {
-      const [scannedCard] = await Promise.all([
-        getCard(cardId),
+      const [scanResult] = await Promise.all([
+        getScannedStudentCard(cardId),
         new Promise<void>((resolve) => window.setTimeout(resolve, 900)),
       ]);
+      const scannedCard = scanResult?.card;
       if (!scannedCard) throw new CardNotFoundError();
       setCard(scannedCard);
     } catch (cause) {
@@ -51,8 +52,8 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
           </h1>
           <p className="mt-1 text-sm text-[#75685A]">
             {card
-              ? "Balances are only shown after a physical TapNPay card scan."
-              : "Ask the student to scan their physical card to view the available balance."}
+              ? "Balance was loaded from the student's online wallet."
+              : "Scan the student's matric barcode to view their live wallet balance."}
           </p>
         </div>
         <button
@@ -77,9 +78,19 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
                   Student details
                 </h2>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 aria-hidden="true" className="size-3.5" />
-                Scan successful
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  card.is_profile_complete
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-800"
+                }`}
+              >
+                {card.is_profile_complete ? (
+                  <CheckCircle2 aria-hidden="true" className="size-3.5" />
+                ) : (
+                  <AlertCircle aria-hidden="true" className="size-3.5" />
+                )}
+                Profile {card.is_profile_complete ? "complete" : "incomplete"}
               </span>
             </div>
             <div className="mt-6">
@@ -91,8 +102,7 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
                   Department
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#231B12]">
-                  {demoStudentDetails[card.student_id]?.department ||
-                    "Department not provided"}
+                  {card.department || "Department not provided"}
                 </p>
               </div>
               <div>
@@ -103,6 +113,26 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
                   {card.student_id}
                 </p>
               </div>
+              {card.faculty && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#8B8072]">
+                    Faculty
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#231B12]">
+                    {card.faculty}
+                  </p>
+                </div>
+              )}
+              {card.level && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-[#8B8072]">
+                    Level
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#231B12]">
+                    {card.level}
+                  </p>
+                </div>
+              )}
             </div>
           </article>
 
@@ -142,10 +172,10 @@ export function BalanceCheck({ onBack }: { onBack: () => void }) {
           <div className="mx-auto max-w-2xl space-y-5">
           <ScanListener
             onScan={handleScan}
-            onScanClick={() => void handleScan(demoCards[0].card_id)}
             disabled={isScanning}
             compact
             scanning={isScanning}
+            autoFocus
           />
 
           {error && (

@@ -71,7 +71,7 @@ export function ApprovalScreen({
           Payment successful
         </h1>
         <p className="mt-2 text-xs text-[#75685A]">
-          The demo transaction has been saved on this device.
+          The student wallet has been debited and this payment is saved in terminal history.
         </p>
         <p className="mt-6 font-sora text-[34px] font-bold tracking-tight text-[#8C5E1E]">
           {formatKobo(transaction.amount)}

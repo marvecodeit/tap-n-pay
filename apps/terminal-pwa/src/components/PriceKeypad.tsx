@@ -128,7 +128,6 @@ export function PriceKeypad({
               onChange(nextAmountKobo);
             }}
             onFocus={(event) => event.currentTarget.select()}
-            pattern="[0-9]*"
             type="text"
             value={formattedAmount}
           />
